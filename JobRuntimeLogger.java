@@ -22,6 +22,12 @@ import com.bpadomain.persistence.runners.TableCacheRSHandler;
 import com.bpadomain.persistence.statements.SQLBuilder;
 import com.bpadomain.support.utils.datetime.DateDecorator;
 
+
+
+/**
+ * Author: Goran Drapic
+ * Date: April 28, 2009
+ */
 public class JobRuntimeLogger extends RowBean{
 	
 	private static final Logger log = Logger.getLogger(JobRuntimeLogger.class);
@@ -151,7 +157,7 @@ public class JobRuntimeLogger extends RowBean{
 		//   String sqlUpdate = "update BPA_JOB_RUNTIME_LOG set STATUS = 'RUN' where RUNTIME_ID = ? and STATUS = 'RED'" ;
 		int retVal = update();
 		
-		if(status == STATUS.FAL){			
+		if(retVal == 1 && status == STATUS.FAL){			
 			TableCacheRSHandler rsh = new TableCacheRSHandler();
 			TableCache result = new SQLRunner().insert(
 					TABLE.BPA_JOB_RUNTIME_ERROR_LOG.sqlInsert, 
