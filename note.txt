@@ -1,6 +1,8 @@
 HLD("ON HOLD"),
 HOE("HOLD ON EXCLUSION"),
 
+//deal[dealHeader[dealId='" + dealId + "']]
+
 http://www.w3schools.com/xpath/default.asp
 
 http://stackoverflow.com/questions/912194/matching-a-node-based-on-a-siblings-value-with-xpath
