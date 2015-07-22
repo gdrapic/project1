@@ -1,2 +1,9 @@
 HLD("ON HOLD"),
 HOE("HOLD ON EXCLUSION"),
+
+http://www.w3schools.com/xpath/default.asp
+
+http://stackoverflow.com/questions/912194/matching-a-node-based-on-a-siblings-value-with-xpath
+http://stackoverflow.com/questions/1198253/xpath-how-to-select-elements-based-on-their-value
+http://stackoverflow.com/questions/1982624/using-xpath-how-do-i-select-a-node-based-on-its-text-content-and-value-of-an-at
+http://stackoverflow.com/questions/14248063/xpath-to-select-element-by-attribute-value
