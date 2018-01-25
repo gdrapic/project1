@@ -1,0 +1,7 @@
+     if(appCache.get(key)==null) {
+			
+				appCache.putIfAbsent(key, new MyObject());
+			}
+			else {
+				o = (MyObject)appCache.get(key).get();
+			}
