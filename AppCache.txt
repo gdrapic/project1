@@ -5,3 +5,70 @@
 			else {
 				o = (MyObject)appCache.get(key).get();
 			}
+
+@RequestMapping(value = "/v1/testError", method = RequestMethod.GET)
+	public ResponseEntity<ResponseDetails> testError(HttpSession httpSession,
+			@RequestParam(value = "type", required = true) String type)
+			throws ExceptionResponse, JsonProcessingException
+	{
+
+		Map<String, Object> respSample = new HashMap<String, Object>();
+		respSample.put("message", "This is a Sample Response ...");
+
+		//WARNING..
+		if ( "WARNING".equalsIgnoreCase(type) )
+			return new ResponseDetails(CODE.RSSSRV_WARN_NOTIFICATION_FAILURE, "Email failed!")
+					.getResponseEntity(respSample);
+		/* WARNING Response:
+		 	{
+			  "exceptionCode": 1510,
+			  "responseCode": 1510,
+			  "category": "WARNING",
+			  "component": "RSSSRV",
+			  "description": "Failed to send notification",
+			  "details": "Email failed!",
+			  "apiResponse": {
+			    "message": "This is a Sample Response ..."
+			  }
+			}
+		 */
+
+		//ERROR
+		if ( "ERROR".equalsIgnoreCase(type) )
+		{
+			//throw new ExceptionResponse... SHOULD BE USED IN CASE WE NEED TO ROLL BACK TRANSACTION...
+			throw new ExceptionResponse(
+					new ResponseDetails(CODE.ERR_AUTHORIZATION, "This is detailed description!"));
+
+			//			return new ResponseDetails(CODE.ERR_AUTHORIZATION, "This is detailed description!").getResponseEntity();
+		}
+
+		//here shoul
+		/* ERROR Response:
+		 	{
+			  "exceptionCode": 1020,
+			  "responseCode": 1020,
+			  "category": "ERROR",
+			  "component": "RRSSRV",
+			  "description": "Not Authorized",
+			  "details": "This is detailed description!",
+			  "apiResponse": null
+			}
+		 */
+
+		//SUCCESS
+		return new ResponseDetails(CODE.SUCCESS, "OK").getResponseEntity(respSample);
+		/*SUCCESS response
+			{
+			  "exceptionCode": 200,
+			  "responseCode": 200,
+			  "category": "SUCCESS",
+			  "component": "ALL",
+			  "description": "Success",
+			  "details": "OK",
+			  "apiResponse": {
+			    "message": "This is a Sample Response ..."
+			  }
+			}
+		 */
+	}
