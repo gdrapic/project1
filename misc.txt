@@ -1,0 +1,310 @@
+
+	/**
+	 * REST API: /download
+	 * 
+	 * @param fileDetailsId
+	 * @param response
+	 * @throws IOException
+	 */
+	@RequestMapping(value = "/v1/downloadFile", method = RequestMethod.GET, produces = { "application/octet-stream" })
+	public void downloadFile(@RequestParam(value = "fileDetailsId", required = true) Long fileDetailsId,
+			@Context HttpServletResponse response, HttpServletRequest request) throws IOException {
+
+		recordLogging(request, true, JsonUtil.toJson(request.getParameterMap()));
+		FileDetails fileDetails1 = fileDetailsRepository.findOne(fileDetailsId);
+
+		response.setContentLength(fileDetails1.getFileContent().length);
+		response.setHeader("Content-Disposition", "attachment; filename=" + fileDetails1.getFileName());
+
+		ServletOutputStream outStream = response.getOutputStream();
+		InputStream in = new ByteArrayInputStream(fileDetails1.getFileContent());
+
+		try {
+			byte[] bbuf = new byte[1024];
+			int length = 0;
+			while ((in != null) && ((length = in.read(bbuf)) != -1)) {
+				outStream.write(bbuf, 0, length);
+			}
+
+		} catch (Exception e) {
+			recordError(request, false, e);
+		} finally {
+			in.close();
+			outStream.flush();
+		}
+		recordLogging(request, false, "");
+	}
+
+	/**
+	 * REST API: /upload
+	 * 
+	 * @param requestId
+	 * @param fileTypes
+	 * @param files
+	 * @return
+	 * @throws Exception
+	 */
+	@RequestMapping(value = "/v1/uploadFile", method = RequestMethod.POST)
+	public @ResponseBody Boolean uploadFile(@RequestParam(value = "requestId", required = true) Long requestId,
+			@RequestParam(value = "fileType", required = true) String[] fileTypes,
+			@RequestParam(value = "file", required = true) MultipartFile[] files, HttpServletRequest request) throws Exception {
+
+		if (fileTypes != null && files != null && fileTypes.length != files.length)
+			throw new Exception("Number of fileType parameters and file parameters has to be the same!");
+
+		WorkflowRequest wfr = workflowRequestRepository.findOne(requestId);
+		List<FileDetails> fileDetailsList = new ArrayList<FileDetails>();
+		for (int i = 0; i < files.length; i++) {
+			
+			try //Validate attachment files
+			{
+				validateFile(files[i]);
+
+			} catch (ExceptionResponse er)
+			{
+				recordError(request, false, er);
+				throw er;
+			}
+			
+			FileDetails fileDetails = new FileDetails();
+			fileDetails.setFileName(files[i].getOriginalFilename());
+			fileDetails.setFileType(fileTypes[i]);
+			fileDetails.setRequestDetails(wfr.getRequestDetails());
+			fileDetails.setFileContent(files[i].getBytes());
+			fileDetailsList.add(fileDetails);
+
+		}
+
+		fileDetailsRepository.save(fileDetailsList);
+
+		return true;
+	}
+
+
+
+///////////////////////////////////////////////////////////////////////////////
+@RequestMapping(value = "/downloadFile", method = RequestMethod.GET, produces =
+	{ "application/octet-stream" })
+	public void downloadFile(@RequestParam(value = "fileDetailsId", required = true) Long fileDetailsId,
+			@Context HttpServletResponse response, HttpServletRequest request)
+			throws IOException, RestClientException, CarpException
+	{
+		recordLogging(request, true, JsonUtil.toJson(request.getParameterMap()));
+		
+		String url = restConfig.getAccessUrl() + restConfig.getCarpservicesUri() + "/v1/downloadFile?fileDetailsId="
+				+ fileDetailsId;
+		LOGGER.info(url);
+
+		HttpHeaders headers = new HttpHeaders();
+		headers.setAccept(Arrays.asList(MediaType.APPLICATION_OCTET_STREAM));
+
+		ResponseEntity<byte[]> responseEntity = getRestTemplate(request).exchange(url, HttpMethod.GET,
+				new HttpEntity(headers), byte[].class, "1");
+
+		HttpHeaders respHeaders = responseEntity.getHeaders();
+
+		response.setContentLength(responseEntity.getBody().length);
+
+		response.setHeader("Content-Disposition", respHeaders.get("Content-Disposition").get(0));
+
+		ServletOutputStream outStream = response.getOutputStream();
+
+		InputStream in = new ByteArrayInputStream(responseEntity.getBody());
+
+		try
+		{
+			byte[] bbuf = new byte[1024];
+			int length = 0;
+			while ((in != null) && ((length = in.read(bbuf)) != -1))
+			{
+				outStream.write(bbuf, 0, length);
+			}
+
+			recordLogging(request, false, "");
+		} catch (Exception e)
+		{
+			recordError(request, false, e);
+			
+		} finally
+		{
+			in.close();
+			outStream.flush();
+		}
+	}
+
+	/**
+	 * REST API: /upload
+	 * 
+	 * @param requestId
+	 * @param fileTypes
+	 * @param files
+	 * @return
+	 * @throws Exception
+	 */
+	@RequestMapping(value = "/uploadFile", method = RequestMethod.POST)
+	public @ResponseBody Boolean uploadFile(@RequestParam(value = "requestId", required = true) Long requestId,
+			@RequestParam(value = "fileType", required = true) String[] fileTypes,
+			@RequestParam(value = "file", required = true) MultipartFile[] files, HttpServletRequest request)
+			throws Exception
+	{
+		recordLogging(request, true, JsonUtil.toJson(request.getParameterMap()));
+		
+		String url = restConfig.getAccessUrl() + restConfig.getCarpservicesUri() + "/v1/uploadFile";
+		LOGGER.info(url);
+
+		MultiValueMap<String, Object> map = new LinkedMultiValueMap<String, Object>();
+		map.add("requestId", requestId);
+
+		for ( int i = 0 ; i < fileTypes.length ; i++ )
+		{
+			map.add("fileType", fileTypes[i]);
+		}
+
+		for ( int i = 0 ; i < files.length ; i++ )
+		{
+			map.add("file", new FileMessageResource(files[i].getBytes(), files[i].getOriginalFilename()));
+		}
+
+		HttpEntity<LinkedMultiValueMap<String, Object>> requestEntity = new HttpEntity<LinkedMultiValueMap<String, Object>>(
+				(LinkedMultiValueMap<String, Object>) map);
+		Boolean result = getRestTemplate(request).postForObject(url, requestEntity, Boolean.class);
+		result = (result == null) ? new Boolean(false) : result;
+		recordLogging(request, false, JsonUtil.toJson(result));
+		return result;
+		
+
+	}
+	
+
+
+///////////////////////////////////////////////////////////////
+import org.springframework.core.io.ByteArrayResource;
+
+/**
+ * @author drapig3 - Nov. 2016
+ *
+ */
+public class FileMessageResource extends ByteArrayResource
+{
+
+	/**
+	 * The filename to be associated with the file data.
+	 */
+	private final String filename;
+
+	public FileMessageResource(final byte[] byteArray, final String filename)
+	{
+		super(byteArray);
+		this.filename = filename;
+	}
+
+	@Override
+	public String getFilename()
+	{
+
+		return filename;
+	}
+}
+
+////////////////////////////////////////////////////////////////////
+		ServletOutputStream outStream = null;
+
+		InputStream in = null;
+
+		try
+		{
+			HttpHeaders headers = new HttpHeaders();
+			headers.setAccept(Arrays.asList(MediaType.APPLICATION_OCTET_STREAM));
+
+			ResponseEntity<byte[]> responseEntity = getRestTemplate(request).exchange(url, HttpMethod.POST,
+					new HttpEntity(reportApprovedReq, headers), byte[].class, "1");
+
+			HttpHeaders respHeaders = responseEntity.getHeaders();
+
+			response.setContentLength(responseEntity.getBody().length);
+			response.setHeader("@RequestMapping(value = "/submitDataAccessWorkflowRequest", method = RequestMethod.POST)
+	public @ResponseBody ResponseEntity submitDataAccessWorkflowRequest(
+			@RequestParam(value = "workflowRequest", required = true) String workflowRequestStr,
+			@RequestParam(value = "piaFile", required = false) MultipartFile piaFile,
+			@RequestParam(value = "otherFile4", required = false) MultipartFile otherFile4,
+			@RequestParam(value = "otherFile1", required = false) MultipartFile otherFile1,
+			@RequestParam(value = "otherFile2", required = false) MultipartFile otherFile2,
+			@RequestParam(value = "otherFile3", required = false) MultipartFile otherFile3, HttpServletRequest request)
+			throws IOException, CarpException
+	{
+		recordLogging(request, true, JsonUtil.toJson(request.getParameterMap()));
+		
+		String url = restConfig.getAccessUrl() + restConfig.getCarpservicesUri()
+				+ "/v1/submitDataAccessWorkflowRequest";
+		LOGGER.info(url);
+
+		MultiValueMap<String, Object> map = new LinkedMultiValueMap<String, Object>();
+
+		map.add("workflowRequest", workflowRequestStr);
+
+		if ( piaFile != null )
+		{
+			map.add("piaFile", new FileMessageResource(piaFile.getBytes(), piaFile.getOriginalFilename()));
+		}
+		if ( otherFile4 != null )
+		{
+			map.add("otherFile4", new FileMessageResource(otherFile4.getBytes(), otherFile4.getOriginalFilename()));
+		}
+		if ( otherFile1 != null )
+		{
+			map.add("otherFile1", new FileMessageResource(otherFile1.getBytes(), otherFile1.getOriginalFilename()));
+		}
+		if ( otherFile2 != null )
+		{
+			map.add("otherFile2", new FileMessageResource(otherFile2.getBytes(), otherFile2.getOriginalFilename()));
+		}
+		if ( otherFile3 != null )
+		{
+			map.add("otherFile3", new FileMessageResource(otherFile3.getBytes(), otherFile3.getOriginalFilename()));
+		}
+
+		HttpEntity<LinkedMultiValueMap<String, Object>> requestEntity = new HttpEntity<LinkedMultiValueMap<String, Object>>(
+				(LinkedMultiValueMap<String, Object>) map);
+
+		//Boolean result =  getRestTemplate(request).postForObject(url, requestEntity, Boolean.class);
+		//return result==null?new Boolean(false):result;
+		ResponseEntity resp =  getRestTemplate(request).exchange(url, HttpMethod.POST, requestEntity,
+				new ParameterizedTypeReference<ResponseDetails<Boolean>>()
+				{
+				});
+		
+		recordLogging(request,false,JsonUtil.toJson(resp==null?null:resp.getBody()));
+		return resp;
+	}Content-Disposition", respHeaders.get("Content-Disposition").get(0));
+
+			//			response.setContentType("txt/csv");
+			//			response.addHeader(name, value);
+
+			outStream = response.getOutputStream();
+
+			in = new ByteArrayInputStream(responseEntity.getBody());
+
+			byte[] bbuf = new byte[1024];
+			int length = 0;
+			while ((in != null) && ((length = in.read(bbuf)) != -1))
+			{
+				outStream.write(bbuf, 0, length);
+			}
+
+		} catch (Exception e)
+		{
+			//	        e.printStackTrace();
+		} finally
+		{
+			try
+			{
+				if ( outStream != null )
+					outStream.flush();
+				if ( in != null )
+					in.close();
+			} catch (IOException e)
+			{
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
