@@ -1,4 +1,322 @@
 
+import java.io.File;
+
+// Depth first search of DOM Tree
+
+public abstract class SimpleFileIterator {
+    int level = 0;
+
+    public int getLevel() {
+        return level;
+    }
+
+    // note use of recursion
+    public void followFile(File file) throws Exception {
+
+        if (!isSelected(file)) return;
+
+
+        processFile(file);
+
+        if (file.listFiles() != null) {
+            level++;
+            File[] files = file.listFiles();
+            for (int i = 0; i < files.length; i++) {
+                followFile(files[i]);
+            }
+            level--;
+        }
+
+        postProcessFile(file);
+
+    }
+
+    // Override this method to apply selection criteria
+    protected boolean isSelected(File file) {
+        return true;
+    }
+
+    // Implement this methods to do something as each file is visited
+    protected abstract void processFile(File file) throws Exception;
+
+    protected abstract void postProcessFile(File file) throws Exception;
+
+}
+
+
+////////////////////////////////////////////////////////////////
+import java.io.File;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+
+// Depth first search of DOM Tree
+
+public abstract class FileFilter extends SimpleFileIterator {
+
+    private String[] addRe;
+    private String[] skipRe;
+
+    private File[] files;
+    private File[] roots;
+    private int currRootIdx;
+    private long fIdx = 0;
+
+    protected FileFilter(String file) {
+        this(new File(file));
+    }
+
+    protected FileFilter(File file) {
+        this(new File[]{file});
+    }
+
+    protected FileFilter(String[] files) {
+        File[] fileArr = new File[files.length];
+        for (int i = 0; i < fileArr.length; i++) {
+            fileArr[i] = new File(files[i]);
+        }
+
+        this.files = fileArr;
+    }
+
+    protected FileFilter(File[] files) {
+        this.files = files;
+    }
+
+    public void apply() throws Exception {
+        init();
+        roots = new File[files.length];
+        for (int i = 0; i < files.length; i++) {
+            currRootIdx = i;
+            roots[i] = files[i].isDirectory()?files[i]:files[i].getParentFile();
+            followFile(files[i]);
+        }
+        release();
+    }
+
+    public void init() throws Exception{
+        //Overwrite this method
+    }
+
+    public void release() throws Exception{
+        //Overwrite this method
+    }
+
+    protected boolean isSelected(File file) {
+
+        if (skipRe != null) {
+            for (int i = 0; i < skipRe.length; i++) {
+                String re = skipRe[i];
+                if (re!=null && re.trim().length()>0 && file.getPath().matches(re)) return false;
+            }
+        }
+
+        if (addRe != null && addRe.length > 0 && !file.isDirectory()) {
+            boolean retVal = false;
+            for (int i = 0; i < addRe.length; i++) {
+                String re = addRe[i];
+                if (re!=null
+                        //&& re.trim().length()>0
+                        ) {
+                    retVal = retVal || file.getPath().matches(re);
+                }
+            }
+            return retVal;
+        }
+
+        return true;
+    }
+
+    public String[] getAddRe() {
+        return addRe;
+    }
+
+    public void setAddRe(String[] addRe) {
+        this.addRe = addRe;
+    }
+
+    public String[] getSkipRe() {
+        return skipRe;
+    }
+
+    public void setSkipRe(String[] skipRe) {
+        this.skipRe = skipRe;
+    }
+
+    String identStr = "\t";
+
+    public String getIdent() {
+        int i = getLevel();
+        StringBuffer sb = new StringBuffer("");
+        while (i-- > 0) sb.append(identStr);
+        return sb.toString();
+    }
+
+    public String trimRoot(File file){
+        String trimmedRoot = "";
+        if (file.getPath().indexOf(getCurrentRoot().getPath()) > -1) {
+            trimmedRoot = file.getPath().length()>getCurrentRoot().getPath().length()?file.getPath().substring(getCurrentRoot().getPath().length() + 1):file.getPath().substring(getCurrentRoot().getPath().length());
+        }
+
+        return trimmedRoot;
+    }
+
+    public static File setTimestamp(File file) {
+        SimpleDateFormat yyyyMMddHHmmss = new SimpleDateFormat("yyyyMMddHHmmss");
+        StringBuffer sb = new StringBuffer();
+        if (file != null) {
+            String filePath = file.getPath();
+            sb = new StringBuffer(file.getPath());
+            sb.replace(filePath.lastIndexOf("."),
+                    filePath.lastIndexOf("."),
+                    "." + yyyyMMddHHmmss.format(new Date()));
+        }
+        return new File(sb.toString());
+    }
+
+    public int getCurrRootIdx() {
+        return currRootIdx;
+    }
+
+    public void setCurrRootIdx(int currRootIdx) {
+        this.currRootIdx = currRootIdx;
+    }
+
+    public long getFIdx() {
+        return fIdx;
+    }
+
+    public String getIdentStr() {
+        return identStr;
+    }
+
+    public void setIdentStr(String identStr) {
+        this.identStr = identStr;
+    }
+
+    public File getCurrentRoot() {
+        return roots[currRootIdx];
+    }
+
+    public File[] getRoots() {
+        return roots;
+    }
+
+    public void setRoots(File[] roots) {
+        this.roots = roots;
+    }
+}
+
+////////////////////////////////////////////////////////////
+import java.io.File;
+
+import utils.regex.StreamEditor;
+
+
+public class Substitute extends FileFilter {
+
+    String expression = "";
+    boolean mkdirs = false;
+    boolean verbose = false;
+    boolean overwrite = false;
+
+    File destDir;
+
+    public Substitute(String file, String expression, String destDir) {
+        super(file);
+        this.expression = expression;
+        this.destDir = new File(destDir);
+    }
+
+    public Substitute(File file,  String expression, File destDir) {
+        super(file);
+        this.expression = expression;
+        this.destDir = destDir;
+    }
+
+    public Substitute(String[] files, String expression, String destDir) {
+        super(files);
+        this.expression = expression;
+        this.destDir = new File(destDir);
+    }
+
+    public Substitute(File[] files,  String expression, File destDir) {
+        super(files);
+        this.expression = expression;
+        this.destDir = destDir;
+    }
+
+    public boolean isMkdirs() {
+		return mkdirs;
+	}
+
+	public void setMkdirs(boolean mkdirs) {
+		this.mkdirs = mkdirs;
+	}
+
+	public boolean isVerbose() {
+		return verbose;
+	}
+
+	public void setVerbose(boolean verbose) {
+		this.verbose = verbose;
+	}
+	
+	public boolean isOverwrite() {
+		return overwrite;
+	}
+
+	public void setOverwrite(boolean overwrite) {
+		this.overwrite = overwrite;
+	}
+
+	// Implement this methods to do something as each file is visited
+    protected void processFile(File file) {
+        if (file.isDirectory()) return;
+        if (file.exists() && !overwrite) return;
+        String str = new TextFile(file.getPath()).getContent();
+
+        str = StreamEditor.sed(str,expression);
+
+        String destFilePath = "";
+        if (file.getPath().indexOf(getCurrentRoot().getPath()) > -1) {
+            String trimmedRoot = file.getPath().substring(getCurrentRoot().getPath().length());
+            destFilePath =  destDir.getPath() +  File.separator + trimmedRoot;
+            new TextFile(destFilePath, mkdirs).print(str, false);
+        } else {
+            // TODO:Throw exception !!!!!
+            //destFilePath = destDir + sed(f.toString(), "s/^.://g");
+        }
+        if ( verbose ) System.out.println("File: " + file);
+    }
+
+    protected void postProcessFile(File file) {
+        //
+    }
+
+    public static void main(String[] args) throws Exception {
+        String[] addRe = {"^.*\\.html$", "^.*\\.htm$"};
+        String[] skipRe = {"^.*bak$", "^.*CVS$"};
+
+        Substitute subst = new Substitute(
+                "c:\\wdir\\",
+                
+                        "-e s/SiteBuilder\\/2.0.3\\/1.4.1_03/DocumentMill 2.05/g" +
+                        " -e s/\\<\\!--\\$.*\\$--\\>//g" +
+                        " -e s/<base href\\=\\\".*>//g" +
+                        " -e s/sitebuilder\\///g" +
+                        " -e s/preview\\///g"
+                        ,
+                "c:/deployables"
+        );
+        subst.setAddRe(addRe);
+        subst.setSkipRe(skipRe);
+        subst.apply();
+
+    }
+}
+
+
+///////////////////////////////////////////////////////////////
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.File;
