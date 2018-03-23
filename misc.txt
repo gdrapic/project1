@@ -731,6 +731,284 @@ public class ElementAdapter implements Serializable{
 //    	return str.replaceAll("&lt;","<").replaceAll("&gt;",">").replaceAll("&quot;","\"");
 //    }
 }
+///////////////////////////////////////////////////////////////////
+
+import java.util.Hashtable;
+
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.NamedNodeMap;
+import org.w3c.dom.Node;
+
+import com.jcocktail.utils.file.TextFile;
+
+public class NodeToHTMLTable extends NodeIterator {
+
+    StringBuffer sb = new StringBuffer();
+    int eId = 0;
+    int eIdx = 1;
+    //String currentElementName ="";
+    String lastElementName = "";
+
+    Hashtable elementMap = new Hashtable();
+    
+    boolean showFileData=false;
+    
+
+    public boolean isShowFileData() {
+		return showFileData;
+	}
+
+	public void setShowFileData(boolean showFileData) {
+		this.showFileData = showFileData;
+	}
+
+	public NodeToHTMLTable(Node n) throws Exception {
+        super();
+        followNode(n);
+    }
+
+    public Element getElement(Object key) {
+        return (Element) elementMap.get(key);
+    }
+
+    /* (non-Javadoc)
+    * @see com.docmill.utils.xml.dom.NodeIterator#processNode(org.w3c.dom.Node)
+    */
+    protected void processNode(Node node) {
+        if (node.getNodeType() != Node.ELEMENT_NODE) return;
+        eId++;
+        ElementAdapter ea = new ElementAdapter((Element) node);
+
+        if (!lastElementName.equals(ea.getElementName())) {
+            eIdx = 1;
+        }
+        String elementKey = String.valueOf(node.hashCode());
+        elementMap.put(elementKey, (Element) node);
+
+        //System.out.println(ea.getXPath());
+
+        //System.out.println((eId++) + ea.getPath().replaceAll("/", "-") + "-" + eIdx++);
+//        DomElemzentEvaluator eval = new DomElementEvaluator((Element) node);
+
+//        String retVal = null;
+//        try {
+//            retVal = eval.evalExp("${IDENT}<${NAME} ${ATTRIB_LIST}>${TEXT_CDATA}");
+//        } catch (Exception e) {
+//            e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
+//        }
+//        System.out.println(retVal);
+
+//        sb.append("\n").append(ea.getIdent()).append("<TABLE border=\"1\" bordercolor=\"#9BB5D0\" width=\"100%\" cellspacing=\"0\" cellpadding=\"2\"><TR><TD width=\"5\" bgcolor=\"#E2AAAA\" align=\"center\" valign=\"top\" rowspan=\"2\">-</TD><TD bgcolor=\"#E2DEDC\" valign=\"top\"><I><B>").
+//                append(ea.getElementName()).append("</B></I></TD><TD>").append(getAttributeHTMLTableV2(ea)).append(
+//                "</TD></TR><TR><TD colspan=\"2\">");
+        sb.
+                append("<font color=\"003399\" face=\"Arial, Helvetica\" size=2>\n").
+                append("\t\t<a id=\"xCell_").append(eId).append("\" style=\"CURSOR: auto;\" onclick=\"ShowHide('Cell_").append(eId).
+                append("');\" href=\"#xCell_").append(eId).append("\" >\n").
+                append("\t\t\t<font face=Arial,helvetica color=#aa0000 size=1><b>&gt;&gt;</b></font>\n").
+                append("\t\t</a>\n").
+                append("\t\t&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;\n").
+                append("\t\t<a href=\"DirectoryDetail.jsp?perform=Update&RECORD_ID=").append(eId).append(
+                "\"><font face=\"Arial,helvetica\" color=\"#aa0000\" size=\"1\">edit</font></a>&nbsp;\n").
+                append("\t\t<a href=\"DirectoryDetail.jsp?perform=Print&elementKey=").append(elementKey).append(
+                "\"><font face=\"Arial,helvetica\" color=\"#aa0000\" size=\"1\">print</font></a>&nbsp;\n").
+                append("\t\t<a href=\"javascript:openThis('PrintNode.jsp?elementKey=").append(elementKey).append(
+                "','card',376,264,(screen.availWidth/2 - 376/2),(screen.availHeight/2 - 240/2))\"><font face=\"Arial,helvetica\" color=\"#aa0000\" size=\"1\">print</font></a>&nbsp;\n").
+                append("\t\t<fieldset>\n").
+                append("\t\t<legend>\n").
+                append("\t\t\t<a href=\"javascript:openThis('PrintNode.jsp?elementKey=").append(elementKey).append(
+                "','card',376,264,(screen.availWidth/2 - 376/2),(screen.availHeight/2 - 240/2),'yes','yes','no')\">\n").
+                append("\t\t\t\t<font face=\"Arial,helvetica\" color=\"#aa0000\" size=\"3\">\n").
+                append("\t\t\t\t\t<b><i>").append(ea.getElementName()).append("</i></b>\n").append("\t\t\t\t</font>\n").
+                append("\t\t\t</a>&nbsp;\n").append("\t\t</legend>\n").
+                append("\t\t<div id=\"Cell_").append(eId).append("\" style=\"padding: 5px; DISPLAY: ").append(getLevel() > 1 ? "none" : "block").append(";\">\n").
+                append("\t\t<TABLE border=\"0\" bordercolor=\"#9BB5D0\" width=\"100%\" cellspacing=\"0\" cellpadding=\"2\">\n").
+                append("\t\t\t<TR>\n").
+                append("\t\t\t\t<TD width=\"5\" bgcolor=\"white\" align=\"center\" valign=\"top\" rowspan=\"2\">-</TD>\n").
+                append("\t\t\t\t<TD bgcolor=\"#E2DEDC\" valign=\"top\">\n").
+                //append("\t\t\t\t\t<I><B>").append(ea.getElementName()).append("</B></I>\n").
+                        append("\t\t\t\t</TD>\n").append("\t\t\t<TD>\n").
+                append("\t\t\t\t").append(getAttributeHTMLTableV2(ea)).append("\t\t\n").
+                append("\t\t\t</TD>\n").append("\t\t</TR>\n").
+                append("\t\t<TR>\n").
+                append("\t\t<TD colspan=\"2\">");
+        lastElementName = ea.getElementName();
+    }
+
+    protected void postProcessNode(Node node) {
+        if (node.getNodeType() != Node.ELEMENT_NODE) return;
+        ElementAdapter ea = new ElementAdapter((Element) node);
+        if (showFileData && ea.getTextAndCDATA() != null && !"".equals(ea.getTextAndCDATA().trim())) {
+            sb.append("<PRE>").append(ea.getTextAndCDATA()).append("</PRE>");
+        }
+
+        ///////////////////////////////////////////////
+        sb.append("\t\t</TD>\n\t</TR></TABLE>\n");
+        sb.append("\t\t</div>\n").append("\t</fieldset>\n").append("</font>&nbsp;");
+        ///////////////////////////////////////////////
+//        DomElementEvaluator eval = new DomElementEvaluator((Element)node);
+//        String retVal = null;
+//        try {
+//            retVal = eval.evalExp("${IDENT}</${NAME}>");
+//        } catch (Exception e) {
+//            e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
+//        }
+//        System.out.println(retVal);
+        ///////////////////////////////////////////////
+    }
+
+    private String getAttributeHTMLTableV1(ElementAdapter ea) {
+        StringBuffer sb = new StringBuffer("<TABLE border=\"1\" width=\"100%\" bordercolor=\\\"white\\\" cellspacing=\"1\" cellpadding=\"2\">");
+        StringBuffer names = new StringBuffer("<TR bgcolor=\"#BEC5D3\">");
+        StringBuffer vals = new StringBuffer("<TR>");
+
+        NamedNodeMap attrMap = ea.getElement().getAttributes();
+
+        for (int i = 0; i < attrMap.getLength(); i++) {
+            Node attr = attrMap.item(i);
+            String attrName = attr.getNodeName();
+            String attrValue = ea.getAttrVal(attrName);
+            names.append("<TD>").append(attrName).append("</TD>");
+            vals.append("<TD>").append(attrValue).append("</TD>");
+        }
+        names.append("</TR>");
+        vals.append("</TR>");
+        sb.append(names).append(vals);
+        sb.append("</TABLE>");
+
+        return sb.toString();
+    }
+
+    private String getAttributeHTMLTableV2(ElementAdapter ea) {
+        StringBuffer sb = new StringBuffer("<TABLE border=\"0\" " +
+                //"width=\"100%\" " +
+                "cellspacing=\"0\" " +
+                "cellpadding=\"2\">");
+
+        NamedNodeMap attrMap = ea.getElement().getAttributes();
+
+        for (int i = 0; i < attrMap.getLength(); i++) {
+
+            Node attr = attrMap.item(i);
+            String attrName = attr.getNodeName();
+            String attrValue = ea.getAttrVal(attrName);
+            sb.append("<TR bgcolor=\"#BEC5D3\"><TD width=\"5\" align=\"center\" valign=\"top\">-</TD><TD valign=\"top\"><B>").append(attrName).append("</B></TD><TD bgcolor=\"#E0E0D1\">").append(attrValue).append("</TD></TR>");
+
+        }
+
+        sb.append("</TABLE>");
+
+        return sb.toString();
+    }
+
+    private String getAttributeHTMLTableV3(ElementAdapter ea) {
+        StringBuffer sb = new StringBuffer("<TABLE border=\"0\" width=\"100%\" cellspacing=\"0\" cellpadding=\"2\">");
+
+        sb.append("<TR bgcolor=\"#BEC5D3\"><TD width=\"5\" align=\"center\" valign=\"top\">-</TD><TD bgcolor=\"#E0E0D1\">").append(ea.attributesToString()).append("</TD></TR>");
+
+        sb.append("</TABLE>");
+
+        return sb.toString();
+    }
+
+//    public static String getJS(){
+//    	//Java Script
+//    	StringBuffer sb = new StringBuffer();
+//    	sb.append("<script language=JavaScript>\n");
+//    	sb.append("<!--\n");
+//    	sb.append("\n");
+//    	sb.append("function toggle(obj){\n");
+//    	sb.append(" if(obj.style.display=='none')\n");
+//    	sb.append("   obj.style.display='block';\n");
+//    	sb.append(" else\n");
+//    	sb.append("   obj.style.display='none';\n");
+//    	sb.append("}\n");
+//    	sb.append("\n");
+//    	sb.append("function ShowHide( ref )\n");
+//    	sb.append("{\n");
+//    	sb.append("  var color;\n");
+//    	sb.append("  //if( ref == 'Structure' )\n");
+//    	sb.append("    color = 'aa0000';\n");
+//    	sb.append("  //else\n");
+//    	sb.append("    //color = '007733';\n");
+//    	sb.append("\n");
+//    	sb.append("  if (eval(ref).style.display =='none')\n");
+//    	sb.append("  {\n");
+//    	sb.append("     eval('x' + ref).innerHTML = '<font face=\"Arial,helvetica\" color=' + color + ' size=1><b>X</b></font>';\n");
+//    	sb.append("     eval(ref).style.display ='';\n");
+//    	sb.append("  }\n");
+//    	sb.append("  else\n");
+//    	sb.append("  {\n");
+//    	sb.append("     eval('x' + ref).innerHTML = '<font face=\"Arial,helvetica\" color=' + color + ' size=1><b>&gt;&gt;</b></font>';\n");
+//    	sb.append("     eval(ref).style.display ='none';\n");
+//    	sb.append("  }\n");
+//    	sb.append("}\n");
+//    	sb.append("//-->\n");
+//    	sb.append("</script>\n");
+//        return sb.toString();
+//    }
+
+    public String toString() {
+
+        sb.append("<script language=JavaScript>\n");
+        sb.append("<!--\n");
+        sb.append("\n");
+        sb.append("function toggle(obj){\n");
+        sb.append(" if(obj.style.display=='none')\n");
+        sb.append("   obj.style.display='block';\n");
+        sb.append(" else\n");
+        sb.append("   obj.style.display='none';\n");
+        sb.append("}\n");
+        sb.append("\n");
+        sb.append("function ShowHide( ref )\n");
+        sb.append("{\n");
+        sb.append("  var color;\n");
+        sb.append("  //if( ref == 'Structure' )\n");
+        sb.append("    color = 'aa0000';\n");
+        sb.append("  //else\n");
+        sb.append("    //color = '007733';\n");
+        sb.append("\n");
+        sb.append("  if (eval(ref).style.display =='none')\n");
+        sb.append("  {\n");
+        sb.append("     eval('x' + ref).innerHTML = '<font face=\"Arial,helvetica\" color=' + color + ' size=1><b>X</b></font>';\n");
+        sb.append("     eval(ref).style.display ='';\n");
+        sb.append("  }\n");
+        sb.append("  else\n");
+        sb.append("  {\n");
+        sb.append("     eval('x' + ref).innerHTML = '<font face=\"Arial,helvetica\" color=' + color + ' size=1><b>&gt;&gt;</b></font>';\n");
+        sb.append("     eval(ref).style.display ='none';\n");
+        sb.append("  }\n");
+        sb.append("}\n");
+        sb.append("//-->\n");
+        sb.append("</script>\n");
+        return sb.toString();
+    }
+
+    public static void main(String[] args) throws Exception {
+        //TextFile xmlFile = new TextFile("c:\\wdir\\DPMX\\web\\WEB-INF\\HTMLTable_DIRECTORY.xml", true);
+        TextFile xmlFile = new TextFile("c:\\dev\\CDS\\doc\\design\\deliveryConfig_sample.xml", true);
+        Document d = BasicDom.parseXml(xmlFile.getContent(), "", false);
+
+        NodeToHTMLTable html = new NodeToHTMLTable(d);
+        TextFile htmlFile = new TextFile("C:\\dev\\CDS\\doc\\design\\deliveryConfig_GUI_sample.html", true);
+        //TextFile htmlFile = new TextFile("c:\\wdir\\DPMX\\web\\WEB-INF\\HTMLTable_DIRECTORY.XMLGUI.html", true);
+        htmlFile.println("<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0 Transitional//EN\">", false);
+        htmlFile.println("<HTML>");
+        htmlFile.println("<HEAD>");
+        htmlFile.println("<TITLE> XML Web GUI </TITLE>");
+        htmlFile.println("</HEAD>");
+        htmlFile.println("<BODY>");
+        htmlFile.println("<H3>Delivery Process Config Page</H3>");
+        htmlFile.println("<HR width=\"100%\">");
+        htmlFile.println(html.toString());
+        htmlFile.println("</BODY>");
+        htmlFile.println("</HTML>");
+
+        //TextFile textFile = new TextFile("C:\\dev\\CDS\\doc\\design\\deliveryConfig_GUI_sample.html",true);
+        //System.out.println(textFile.getContent());
+    }
+}
 
 ////////////////////////////////////////////////////////////////////
 	/**
