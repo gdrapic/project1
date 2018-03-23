@@ -1,4 +1,94 @@
+package misc.iphone;
 
+import org.w3c.dom.Document;
+import org.w3c.dom.Node;
+
+import com.jcocktail.utils.file.TextFile;
+import com.jcocktail.utils.general.FileUtils;
+import com.jcocktail.utils.xml.dom.BasicDom;
+import com.jcocktail.utils.xml.dom.NodeIterator;
+import com.sun.org.apache.xpath.internal.XPathAPI;
+
+public class PlayListIterator extends NodeIterator{
+
+	@Override
+	protected void postProcessNode(Node node) throws Exception {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	protected void processNode(Node node) throws Exception {
+		if(node.getNodeType() == Node.ELEMENT_NODE){
+			//System.out.println("Node name: " + node.getNodeName());
+			if("Song".equals(node.getNodeName())){
+				System.out.println("\n----------------------------------");
+				
+				String title = selectSingleNode(node,"./Title");
+				title = title.replaceAll("/", "-" );
+				//System.out.println("Title: " + title);
+				
+				String performingArtist = selectSingleNode(node,"./PerformingArtist");
+				performingArtist = performingArtist.replaceAll("/", "-" );
+				//System.out.println("PerformingArtist: " + performingArtist);
+				
+				String containedInAlbum = selectSingleNode(node,"./ContainedInAlbum");
+				containedInAlbum = containedInAlbum.replaceAll("/", "-");
+				//System.out.println("ContainedInAlbum: " + containedInAlbum);
+				
+				String path = selectSingleNode(node,"./Location/Path");
+				path = path.replaceAll("\\\\", "/");
+				
+				//System.out.println("Path:" + path);
+				
+				TextFile songFile = new TextFile(path,true);
+								
+				songFile.println("Title: " + title,false);
+				songFile.println("PerformingArtist: " + performingArtist);
+				songFile.println("ContainedInAlbum: " + containedInAlbum);
+				songFile.println("Path:" + path);
+				
+				//System.out.println(songFile.getContent());
+				
+				TextFile renamedFile = new TextFile("/iTunes_Control/"+ performingArtist.trim() +"/" + containedInAlbum.trim() + "/" + title.trim() + ".mp3",true);
+//				renamedFile.println("Title: " + title,false);
+//				renamedFile.println("PerformingArtist: " + performingArtist);
+//				renamedFile.println("ContainedInAlbum: " + containedInAlbum);
+//				renamedFile.println("Path:" + path);
+				
+				FileUtils.copy(songFile, renamedFile);
+				
+				System.out.println(renamedFile.getContent());
+				
+			}
+		}
+				
+	}
+	
+	private String selectSingleNode(Node node, String xPath) throws Exception{
+		Node n = XPathAPI.selectSingleNode(node, xPath);		
+		return n.getTextContent().trim();
+	}
+	
+	public static void main(String[] args) {
+		TextFile xmlFile = new TextFile("/wdev//iPhone.xml");
+		Document d = BasicDom.parseXml(xmlFile.getContent(), "", false);
+		
+		PlayListIterator i = new PlayListIterator();
+		
+		try {
+			i.followNode(d);
+			
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+	}
+
+}
+
+///////////////////////////////////////////////////////////////////////
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
