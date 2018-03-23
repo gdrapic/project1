@@ -1,4 +1,388 @@
 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.zip.CRC32;
+import java.util.zip.CheckedOutputStream;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
+
+public class ZipFile extends File {
+
+    private int level = 0;
+
+    //internall processing
+    private File[] roots;
+    private int currRootIdx;
+    private long fIdx = 0;
+
+    //Constructor fields
+    File[] files;
+
+    //Switches
+    private String[] addRe;
+    private String[] skipRe;
+
+    private boolean verbose = false;
+    private boolean makedirs = false;
+    private boolean fullPaths = false;
+
+    //Zip processing
+    private static final int BUFFER = 2048;
+    private byte data[] = new byte[BUFFER];
+    private FileInputStream fi = null;
+    private BufferedInputStream origin = null;
+    private FileOutputStream dest = null;
+    private CheckedOutputStream checksum = null;
+    private ZipOutputStream out = null;
+
+    public ZipFile(String zipPathname, String[] files) {
+        this(zipPathname, files, false);
+    }
+
+    public ZipFile(String zipPathname, String file) {
+        this(zipPathname, new String[]{file});
+    }
+
+    public ZipFile(String zipPathname, String[] files, boolean timestamp) {
+        super(timestamp ? setTimestamp(zipPathname) : zipPathname);
+        this.files = new File[files.length];
+        for (int i = 0; i < files.length; i++) {
+            this.files[i] = new File(files[i]);
+        }
+    }
+
+    //Public block
+    //Getters & Setters
+    public String[] getAddRe() {
+        return addRe;
+    }
+
+    public void setAddRe(String[] addRe) {
+        this.addRe = addRe;
+    }
+
+    public String[] getSkipRe() {
+        return skipRe;
+    }
+
+    public void setSkipRe(String[] skipRe) {
+        this.skipRe = skipRe;
+    }
+
+    public boolean isVerbose() {
+        return verbose;
+    }
+
+    public void setVerbose(boolean verbose) {
+        this.verbose = verbose;
+    }
+
+    public boolean isMakedirs() {
+        return makedirs;
+    }
+
+    public void setMakedirs(boolean makedirs) {
+        this.makedirs = makedirs;
+    }
+
+    public boolean isFullPaths() {
+        return fullPaths;
+    }
+
+    public void setFullPaths(boolean fullPaths) {
+        this.fullPaths = fullPaths;
+    }
+
+
+    public File create() {
+        try {
+            if (verbose) System.out.println("Creating: " + this.getAbsolutePath());
+            if (makedirs) getParentFile().mkdirs();
+            dest = new FileOutputStream(this);
+            //checksum = new CheckedOutputStream(dest, new Adler32());
+            checksum = new CheckedOutputStream(dest, new CRC32());
+            out = new ZipOutputStream(new BufferedOutputStream(checksum));
+            //out.setMethod(ZipOutputStream.DEFLATED);
+            roots = new File[files.length];
+            for (int i = 0; i < files.length; i++) {
+                currRootIdx = i;
+
+                roots[i] = files[i].getParentFile();
+
+                followFile(files[i]);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            release();
+        }
+        return this;
+    }
+
+    //Private block
+
+    // note use of recursion
+    private void followFile(File file) {
+
+        if (!isSelected(file)) return;
+
+        processFile(file);
+
+        if (file.listFiles() != null) {
+            level++;
+            File[] files = file.listFiles();
+            for (int i = 0; i < files.length; i++) {
+                followFile(files[i]);
+            }
+            level--;
+        }
+
+        postProcessFile(file);
+
+    }
+
+    ///////////////////////////////////////////////
+    //internall processing
+    ///////////////////////////////////////////////
+    private boolean isSelected(File file) {
+
+        if (skipRe != null) {
+            for (int i = 0; i < skipRe.length; i++) {
+                String re = skipRe[i];
+                if (file.getPath().matches(re)) return false;
+            }
+        }
+
+        if (addRe != null && addRe.length > 0 && !file.isDirectory()) {
+            boolean retVal = false;
+            for (int i = 0; i < addRe.length; i++) {
+                String re = addRe[i];
+                retVal = retVal || file.getPath().matches(re);
+            }
+            return retVal;
+        }
+
+        return true;
+    }
+
+    private void processFile(File file) {
+        fIdx++;
+        try {
+
+            String zipEntry = file.toString();
+
+            if (!fullPaths) {
+                if (roots[currRootIdx] != null && roots[currRootIdx].getPath().endsWith(File.separator)) {
+                    zipEntry = file.toString().substring(roots[currRootIdx].getPath().length());
+                } else {
+                    zipEntry = file.toString().substring(roots[currRootIdx].getPath().length() + 1);
+                }
+            }
+
+            if (file.isDirectory()) {
+            	zipEntry = zipEntry + File.separator;
+            }
+
+            
+            ZipEntry entry = new ZipEntry(zipEntry);
+            out.putNextEntry(entry);
+            
+            if (!file.isDirectory()) {
+            	fi = new FileInputStream(file);
+                origin = new BufferedInputStream(fi, BUFFER);
+                int count;
+                while ((count = origin.read(data, 0, BUFFER)) != -1) {
+                    out.write(data, 0, count);
+                }
+            }
+            
+            out.closeEntry();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void postProcessFile(File file) {
+        if (verbose) System.out.println("+ " + file);
+    }
+
+    private void release() {
+        if (checksum != null && verbose) System.out.println("checksum:" + checksum.getChecksum().getValue());
+        try {
+            fi.close();
+            origin.close();
+            out.close();
+            dest.close();
+        } catch (Exception ex) {
+            //
+        }
+    }
+
+    //Utility methods
+    public static String setTimestamp(String fileName) {
+        if (!fileName.matches(".*\\.[^\\.]*$")) return fileName;
+        SimpleDateFormat yyyyMMddHHmmss = new SimpleDateFormat("yyyyMMddHHmmss");
+        StringBuffer sb = null;
+        if (fileName != null) {
+            sb = new StringBuffer(fileName);
+            sb.replace(fileName.lastIndexOf("."),
+                    fileName.lastIndexOf("."),
+                    "." + yyyyMMddHHmmss.format(new Date()));
+        }
+        return sb.toString();
+    }
+
+    public static String getArgVal(String arg) {
+        Pattern paramPattern = Pattern.compile("[a-zA-Z0-9]+=(\"?)(.*)\\1");
+        Matcher m = paramPattern.matcher(arg);
+        if (m.find())
+            return m.group(2);
+        else
+            return null;
+    }
+
+    /**
+     * @param args
+     */
+    public static void main(String[] args) {
+
+        if (args != null && args.length > 1) {
+            String zipFile = null;
+            ArrayList fileList = null;
+            ArrayList addReList = null;
+            ArrayList skipReList = null;
+
+            boolean timestamp = false;
+            boolean verbose = false;
+            boolean makedirs = false;
+            boolean fullPaths = false;
+
+            for (int i = 0; i < args.length; i++) {
+                //System.out.println(args[i]);
+                String arg = args[i].trim();
+                if (arg.startsWith("zip=")) {
+                    zipFile = ZipFile.getArgVal(arg);
+                    System.out.println(zipFile);
+                }
+                if (arg.startsWith("file=")) {
+                    String file = ZipFile.getArgVal(arg);
+                    if (file != null) {
+                        if (fileList == null) fileList = new ArrayList();
+                        fileList.add(file);
+                    }
+                    System.out.println(file);
+                }
+
+                if (arg.startsWith("add=")) {
+                    String add = ZipFile.getArgVal(arg);
+                    if (add != null) {
+                        if (addReList == null) addReList = new ArrayList();
+                        addReList.add(add);
+                    }
+                    System.out.println(add);
+                }
+
+                if (arg.startsWith("skip=")) {
+                    String skip = ZipFile.getArgVal(arg);
+                    if (skip != null) {
+                        if (skipReList == null) skipReList = new ArrayList();
+                        skipReList.add(skip);
+                    }
+                    System.out.println(skip);
+                }
+                if ("time".equalsIgnoreCase(arg)) timestamp = true;
+                if ("verbose".equalsIgnoreCase(arg)) verbose = true;
+                if ("mkdirs".equalsIgnoreCase(arg)) makedirs = true;
+                if ("fullPaths".equalsIgnoreCase(arg)) fullPaths = true;
+            }
+
+            if (zipFile != null && fileList != null && fileList.size() > 0) {
+                String[] files = (String[]) fileList.toArray(new String[fileList.size()]);
+                ZipFile zip = new ZipFile(zipFile, files, timestamp);
+
+                if (addReList != null) {
+                    String[] addRe = (String[]) addReList.toArray(new String[addReList.size()]);
+                    zip.setAddRe(addRe);
+                }
+
+                if (skipReList != null) {
+                    String[] skipRe = (String[]) skipReList.toArray(new String[skipReList.size()]);
+                    zip.setSkipRe(skipRe);
+                }
+
+//    			Create directories if do not exist
+                zip.setMakedirs(makedirs);
+
+//    	      Output the file names to the System.out
+                zip.setVerbose(verbose);
+                zip.setFullPaths(fullPaths);
+
+                //Finally zip it......
+                //if(!zip.exists())
+                zip.create();
+
+            }
+        } else {
+            System.out.println("Example Usage:\n " +
+                    "java ZipFile zip=\"C:\\archives\\MyArchive.zip\" " +
+                    "file=\"C:\\path\\to\\file\" " +
+                    "add=\".*\\.(?i:java)$\" " +
+                    "skip=\".*\\\\(?i:CVS)\\\\.*$\" " +
+                    "time " +
+                    "fullpaths " +
+                    "mkdirs");
+        }
+
+        System.exit(0);
+
+        //Usage Example:
+        //CDS backup ......
+        ZipFile zip = new ZipFile(
+                "C:\\dev\\archive\\CDS.zip", //ZIP file path & name
+                new String[]{
+                        //"c:\\path\\to\\some\\dir\\or\\file",
+                        "C:\\dev\\CDS",
+                }, //array of the files/dirs paths be archived. It could be a single file or directory.
+                true //insert timestamp (Example: CDS.200512141638.zip)
+        );
+
+        //Apply File Filters		
+        //addRe - added files pattern - Regular Expression defines pattern of the file paths to be zipped!
+        //Example: addRe=".*\.(?i:xls|txt)$"  >> select Excel and text file types (with ignore case: xls,XLS, Xls ...)
+        //NOTE: It does not apply to directory paths!!!
+        String[] addRe = {".*\\.(?i:tld|java|jsp|html|htm|js|txt|sh|bat|css|sql|ddl|erl|properties|csv|xml|rpt|jpg|png|gif|dwt|dml)$"};
+
+        //skipRe - skipped files/dirs pattern - Regular Expression !!
+        ////Example: skip=".*\\(?i:bak|CVS)\\.*$" >> does not recurse into bak(BAK,Bak,bAk ..) and CVS(cvs,cVs ..) folders
+        //NOTE: It applies to file and directory paths!!!
+        String[] skipRe = {".*\\\\(?i:CVS)\\\\.*$"};
+
+        zip.setAddRe(addRe);
+        zip.setSkipRe(skipRe);
+
+        //Create directories if do not exist
+        zip.setMakedirs(true);
+
+//      Output the file names to the System.out
+        zip.setVerbose(true);
+        zip.setFullPaths(false);
+
+        //Finally zip it......
+        if (!zip.exists()) zip.create();
+
+        System.out.println("zip = " + zip);
+    }
+}
+/////////////////////////////////////////////////////////////////////
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
