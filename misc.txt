@@ -1,4 +1,111 @@
 
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+
+public class DateDecorator extends Date {
+    
+	private Date date = this;
+    private static final String DEFAULT_DATE_FORMAT = "MM/dd/yyyy";
+    private String dateFormat;
+
+    public DateDecorator() {
+        super();
+    }
+
+    public DateDecorator(String dateStr) throws ParseException {        
+        super(createDate(dateStr, DEFAULT_DATE_FORMAT).getTime());
+    }
+
+    public DateDecorator(Date date, String dateFormat) {
+        super(date.getTime());
+        this.dateFormat = dateFormat;
+    }
+    
+    public DateDecorator(String dateStr, String format) throws ParseException {
+        super(createDate(dateStr, format).getTime());
+        this.dateFormat = format;
+    }
+
+    public DateDecorator(String dateStr, String format, String toFormat) throws ParseException {
+        super(createDate(dateStr, format).getTime());
+        this.dateFormat = toFormat;
+    }
+   
+    public String getDateFormat() {
+        return dateFormat;
+    }
+
+    public void setDateFormat(String dateFormat) {
+        this.dateFormat = dateFormat;
+    }
+
+    public String toString() {
+    	return new SimpleDateFormat((dateFormat != null && !"".equals(dateFormat)) ? dateFormat : DEFAULT_DATE_FORMAT).format(date).toString();        
+    }
+    
+    public static Date createDate(String dateStr, String dateFormat) throws ParseException{
+    	SimpleDateFormat simpleDateFormat = new SimpleDateFormat(dateFormat);
+    	simpleDateFormat.setLenient(false);
+        Date date = simpleDateFormat.parse(dateStr);
+        return date;
+    }
+
+    public static boolean isValid(String dateStr, String dateFormat){
+    	 boolean isValid = true;
+
+         if (dateStr == null || dateStr.trim().equals("") || 
+        		 dateFormat == null || dateFormat.trim().length() == 0)
+         {
+             isValid = false;
+         }
+         else
+         {
+             try
+             {
+                 SimpleDateFormat simpleDateFormat = new SimpleDateFormat(dateFormat);
+                 simpleDateFormat.setLenient(false);
+                 simpleDateFormat.parse(dateStr);
+             }
+             catch (Exception e)
+             {
+                 isValid = false;
+             }
+         }
+
+         return isValid;
+    }
+    public static void main(String[] args) {
+        Date date1 = new DateDecorator();
+        System.out.println("date = " + date1);
+        Date date2;
+		try {
+			date2 = new DateDecorator("02/28/2005", "MM/dd/yyyy");
+		
+	        System.out.println("date2 = " + date2);
+	        DateDecorator date3 = new DateDecorator("01/03/1990", "MM/dd/yyyy", "yyyy-MM-dd");
+	        //date3.setDateFormat("yyyy-MM-dd");
+	        System.out.println("date3= " + date3);
+	
+	        Date date4 = new DateDecorator(new Date(), "yyyy-MM-dd");
+	        System.out.println("date4= " + date4);
+	        System.out.println("date = " + new Date());
+	        java.sql.Date sqlDate = new java.sql.Date(System.currentTimeMillis());
+	        System.out.println("sqlDate = " + sqlDate);
+	        Date date5 = new DateDecorator(sqlDate, "yyyy-MM-dd hh:mm:ss");
+	        System.out.println("date5 = " + date5);
+	        java.sql.Timestamp timestamp = new java.sql.Timestamp(System.currentTimeMillis());
+	        System.out.println("timestamp = " + timestamp);
+	        Date date6 = new DateDecorator(timestamp, "yyyy-MM-dd hh:mm:ss");
+	        System.out.println("date6 = " + date6);
+		} catch (ParseException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+    }
+}
+
+/////////////////////////////////////////////////////////////////
 import java.util.Vector;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
