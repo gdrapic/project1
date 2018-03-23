@@ -252,6 +252,270 @@ public class DOMPrinter extends NodeIterator{
 		System.out.println(w);
 	}
 }
+//BasicDom//////////////////////////////////////////////////////////////////
+
+import java.io.File;
+import java.io.IOException;
+import java.io.StringReader;
+import java.io.StringWriter;
+import java.io.Writer;
+
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.transform.Result;
+import javax.xml.transform.Source;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerConfigurationException;
+import javax.xml.transform.TransformerException;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
+
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.xml.sax.InputSource;
+import org.xml.sax.SAXException;
+
+import com.jcocktail.utils.data.Table;
+import com.jcocktail.utils.data.TableUtils;
+
+public class BasicDom {
+
+    // Parses an XML file and returns a DOM document.
+    // If validating is true, the contents is validated against the DTD
+    // specified in the file.
+    public static synchronized Document parseXmlFile(String filename, boolean validating) throws ParserConfigurationException, IOException, SAXException {
+        //try {
+        // Create a builder factory
+        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+        factory.setValidating(validating);
+
+        // Create the builder and parse the file
+        Document doc = factory.newDocumentBuilder().parse(new File(filename));
+        return doc;
+        //} catch (SAXException e) {
+        // A parsing error occurred; the xml input is not valid
+        //} catch (ParserConfigurationException e) {
+        //} catch (IOException e) {
+        //}
+        //return null;
+    }
+
+    /**
+     * @param s
+     * @param systemId
+     * @param validating
+     * @return
+     */
+    public static synchronized Document parseXml(String s, String systemId, boolean validating) {
+        InputSource is = new InputSource();
+        is.setCharacterStream(new StringReader(s));
+
+        if (systemId != null || "".equals(systemId)) is.setSystemId(systemId);
+
+        try {
+
+            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+            DocumentBuilder builder = factory.newDocumentBuilder();
+            factory.setValidating(validating);
+
+            Document doc = builder.parse(is);
+            return doc;
+        } catch (SAXException sxe) {
+            // Error generated during parsing)
+            Exception x = sxe;
+            if (sxe.getException() != null)
+                x = sxe.getException();
+            x.printStackTrace();
+
+        } catch (ParserConfigurationException pce) {
+            // Parser with specified options can't be built
+            pce.printStackTrace();
+
+        } catch (IOException ioe) {
+            // I/O error
+            ioe.printStackTrace();
+        }
+        return null;
+    }
+
+    public static String writeXml(Document doc) {
+    	String xml = null;
+    	StringWriter out = new StringWriter();
+    	writeXml(doc,new StreamResult(new StringWriter()));
+    	xml = out.toString();
+    	return xml;
+    }
+    
+//  This method writes a DOM document to a file
+    public static void writeXml(Document doc, Writer writer) {
+    	writeXml(doc,new StreamResult(writer));
+    }
+    
+    //  This method writes a DOM document to a file
+    public static void writeXml(Document doc, File file) {
+    	writeXml(doc,new StreamResult(file));
+    }
+    
+    public static void writeXml(Document doc, Result result) {
+        try {
+            // Prepare the DOM document for writing
+            Source source = new DOMSource(doc);
+            // Write the DOM document to the file
+            Transformer xformer = TransformerFactory.newInstance().newTransformer();
+            xformer.transform(source, result);
+        } catch (TransformerConfigurationException e) {
+        } catch (TransformerException e) {
+        }
+    }
+
+    //TODO: This method is in development. Don't use it!!!
+    public static synchronized Document loadFromTable(Table elements, Table attributes) {
+        try {
+
+            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+            DocumentBuilder builder = factory.newDocumentBuilder();
+
+            Document doc = builder.newDocument();
+            Element item = iterateElementTableRows(doc, null, elements, attributes);
+
+            System.out.println("element = " + item);
+            doc.appendChild(item);
+//            try {
+//                Element element = null;
+//                for (int i = 0; i < elements.getRowCount(); i++) {
+//                    String elementId = elements.getString("ELEMENT_ID", i);
+//                    String elementName = elements.getString("ELEMENT_NAME", i);
+//                    String elementText = elements.getString("ELEMENT_TEXT", i);
+//                    String elementParentId = elements.getString("ELEMENT_PARENT_ID", i);
+//
+//                    element = doc.createElement(elementName);
+//
+//                    Table childElements = getChildElements(elements, elementId);
+//                    if (childElements != null) {
+//                        for (int k = 0; k < childElements.getRowCount(); k++) {
+//                            Node n = element.appendChild(doc.createElement(childElements.getString("ELEMENT_NAME", k)));
+//
+//                        }
+//                    }
+//
+//                    System.out.println("childElements = " + childElements);
+////                    while ((childElements = getChildElements(childElements, elementParentId)) != null){
+////                        System.out.println("childElements = " + childElements);
+////                    }
+//
+//                    element.appendChild(doc.createTextNode(elementText));
+//
+//                    Table attribs = TableUtils.select(attributeTable,
+//                            new String[]{"ELEMENT_ID", "ATTRIB_NAME", "ATTRIB_VALUE"},
+//                            new String[]{"ELEMENT_ID=" + elementId});
+//
+//                    if (attribs != null) {
+//                        for (int j = 0; j < attribs.getRowCount(); j++) {
+//                            String name = attribs.getString("ATTRIB_NAME", j);
+//                            String value = attribs.getString("ATTRIB_VALUE", j);
+//                            element.setAttribute(name, value);
+//                        }
+//                    }
+//                }
+//                Element menu = doc.createElement("menu");
+//                menu.appendChild(element);
+//                doc.appendChild(menu);
+//
+//            } catch (Exception e) {
+//                e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
+//            }
+
+
+            return doc;
+
+        } catch (ParserConfigurationException pce) {
+            // Parser with specified options can't be built
+            pce.printStackTrace();
+
+        }
+        return null;
+    }
+
+    private static synchronized Element iterateElementTableRows(Document doc, Element item, Table elements, Table attributes) {
+        try {
+            if (elements != null) {
+                for (int i = 0; i < elements.getRowCount(); i++) {
+                    String elementId = elements.getString("ELEMENT_ID", i);
+                    String elementName = elements.getString("ELEMENT_NAME", i);
+                    String elementText = elements.getString("ELEMENT_TEXT", i);
+                    String elementParentId = elements.getString("ELEMENT_PARENT_ID", i);
+                    System.out.println("elementId = " + elementId);
+                    Table childElements = getChildElements(elements, elementId);
+                    if (item == null) {
+                        item = doc.createElement(elementName);
+
+                    } else {
+                        item.appendChild(doc.createElement(elementName));
+                    }
+
+                    //Append Text Node
+                    item.appendChild(doc.createTextNode(elementText));
+
+                    //Add Attributes
+                    Table attribs = getElementAttributes(attributes, elementId);
+                    for (int j = 0; j < attribs.getRowCount(); j++) {
+                        item.setAttribute(attribs.getString("ATTRIB_NAME", j), attribs.getString("ATTRIB_VALUE", j));
+                    }
+
+
+                    if (childElements != null) iterateElementTableRows(doc, item, childElements, attributes);
+                }
+
+            }
+        } catch (Exception e) {
+            e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
+        }
+        return item;
+    }
+
+    private static synchronized Table getChildElements(Table elements, String elementId) {
+        Table childElements = TableUtils.select(elements,
+                new String[]{"ELEMENT_ID", "ELEMENT_NAME", "ELEMENT_TEXT", "ELEMENT_PARENT_ID"},
+                new String[]{"ELEMENT_PARENT_ID=" + elementId});
+        return childElements;
+    }
+
+    private static synchronized Table getElementAttributes(Table attributes, String elementId) {
+        Table childElements = TableUtils.select(attributes,
+                new String[]{"ELEMENT_ID", "ATTRIB_NAME", "ATTRIB_VALUE"},
+                new String[]{"ELEMENT_ID=" + elementId});
+        return childElements;
+    }
+
+    public static synchronized Document createDocumentInstance() throws ParserConfigurationException {
+        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+        DocumentBuilder builder = factory.newDocumentBuilder();
+        // Create document instance ...
+        Document documnet = builder.newDocument();
+        return documnet;
+    }
+/*
+    public static void main(String[] args) {
+
+        //String str = FileUtils.readStringFromFile("C:\\wdir\\jLab\\DocumentMill\\src\\java\\menu1.xml");
+        String str = FileUtils.readStringFromFile("c:\\wdir\\jLab\\DocumentMill\\src\\java\\resources\\table.xml");
+
+        DomIterator di = new DomIterator(BasicDom.parseXml(str, "", false));
+
+        Table elements = di.getElementTable();
+        System.out.println("elements = " + elements);
+
+        Table attributes = di.getAttributeTable();
+        System.out.println("attributes = " + attributes);
+
+        Document doc = BasicDom.loadFromTable(elements, attributes);
+        System.out.println("doc = " + doc.getDocumentElement());
+    }
+    */
+}
+
 ////////////////////////////////////////////////////////////////////
 	/**
 	 * REST API: /download
