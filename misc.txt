@@ -1,4 +1,258 @@
+//NodeIterator//////////////////////////////////////////////////////
+package com.jcocktail.utils.xml.dom;
 
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
+
+// Depth first search of DOM Tree
+
+public abstract class NodeIterator {
+    int level = 0;
+
+    // note use of recursion
+    public void followNode(Node node) throws Exception {
+
+        processNode(node);
+        if (node.hasChildNodes()) {
+            NodeList children = node.getChildNodes();
+            for (int i = 0; i < children.getLength(); i++) {
+                level++;
+                followNode(children.item(i));
+                level--;
+            }
+        }
+        postProcessNode(node);
+
+    }
+
+    public int getLevel() {
+        return level;
+    }
+
+    // Override this method to do something as each node is visited
+    protected abstract void processNode(Node node) throws Exception;
+
+    // I could make processNode() a separate method in
+    // a NodeProcessor interface, and make followNode static
+    // but I wanted to keep this example simple.
+    protected abstract void postProcessNode(Node node) throws Exception;
+
+}
+
+//DOMPrinter/////////////////////////////////////////////////////////////////
+
+import java.io.IOException;
+import java.io.Writer;
+
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.NamedNodeMap;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
+
+public class DOMPrinter extends NodeIterator{
+	
+	private Writer out;
+	private String encoding = "UTF-8";
+	private String lineSeparator = System.getProperty("line.separator");
+	private boolean printDeclaration = true;
+	private String identStr = "\t";
+	
+	public DOMPrinter() {
+		super();
+	}
+	
+	public DOMPrinter(Writer out) {
+		super();
+		this.out = out;
+	}
+
+	public String getEncoding() {
+		return encoding;
+	}
+
+	public void setEncoding(String encoding) {
+		this.encoding = encoding;
+	}
+
+	public boolean isPrintDeclaration() {
+		return printDeclaration;
+	}
+
+	public void setPrintDeclaration(boolean printDeclaration) {
+		this.printDeclaration = printDeclaration;
+	}
+	
+	public String getIdentStr() {
+		return identStr;
+	}
+
+	public void setIdentStr(String identStr) {
+		this.identStr = identStr;
+	}
+
+	public String getLineSeparator() {
+		return lineSeparator;
+	}
+
+	public void setLineSeparator(String lineSeparator) {
+		this.lineSeparator = lineSeparator;
+	}
+
+	public void write(Writer out, Node node) throws Exception{
+		if(node.getNodeType() == Node.DOCUMENT_NODE){			
+			node = ((Document)node).getDocumentElement();			
+		}
+			
+		this.out = out;
+		if(printDeclaration) write("<?xml version=\"1.0\" encoding=\"" + encoding + "\"?>");
+		followNode(node);
+	}
+	
+	public String getIdent(String identVal) {
+        int i = getLevel();
+        StringBuffer sb = new StringBuffer("");
+        while (i-- > 0) sb.append(identVal);
+        return sb.toString();
+    }
+	
+	private void write(String str) throws IOException{
+		out.write(new String(str.getBytes(),encoding));		
+	}
+	
+	public String attributesToString(Element element) {
+        String retVal = "";
+        NamedNodeMap attrMap = element.getAttributes();
+        for (int i = 0; i < attrMap.getLength(); i++) {
+            Node attr = attrMap.item(i);
+            String attrName = attr.getNodeName();
+            String attrValue = element.getAttribute(attrName);
+            retVal = retVal + " " + attrName + "=\"" + attrValue + "\"";
+        }
+        return retVal;
+    }
+	
+	public String getCDATA(Element element) {
+        String txt = "";
+
+        if (element.hasChildNodes()) {
+            NodeList childNodes = element.getChildNodes();
+
+            if (childNodes != null) {
+                for (int j = 0; j < childNodes.getLength(); j++) {
+                    if (childNodes.item(j) != null && childNodes.item(j).getNodeType() == Node.CDATA_SECTION_NODE) {
+                        txt += childNodes.item(j).getNodeValue();
+                    }
+                }
+            }
+        }
+        //else return null;
+        return txt;
+    }
+	
+	public String getTextContent(Element element) {
+        String txt = "";
+
+        if (element.hasChildNodes()) {
+            NodeList childNodes = element.getChildNodes();
+
+            if (childNodes != null) {
+                for (int j = 0; j < childNodes.getLength(); j++) {
+                    if (childNodes.item(j) != null && childNodes.item(j).getNodeType() == Node.TEXT_NODE) {
+                        txt +=  childNodes.item(j).getNodeValue();
+                    }
+                }
+            }
+        }
+        /* Replace XML special characters...
+	    1.  & - &amp;
+			2. < - &lt;
+			3. > - &gt;
+			4. " - &quot;
+			5. ' - &#39; 
+			
+         */
+        return txt.
+        	replaceAll("&", "&amp;").
+			replaceAll("<", "&lt;").
+			replaceAll(">", "&gt;").							
+			replaceAll("\"", "&quot;").
+			replaceAll("'", "&#39;");
+			
+    }
+	
+	protected void processNode(Node node) throws Exception {	
+		
+		if(node.getNodeType() == Node.COMMENT_NODE){
+			write(getIdent(identStr));
+			write("<!-- ");
+			write(node.getNodeValue());
+			write(" -->".concat(lineSeparator));
+			return;
+		}
+		if(node.getNodeType() != Node.ELEMENT_NODE) return;
+				
+		//Do not write a new line separator if 'out' is empty
+		if(out.toString().trim().length()>0)write(lineSeparator);
+		
+		write(getIdent(identStr));
+		write("<");
+		write(node.getNodeName());
+		
+		String attributes = attributesToString((Element)node);
+		if(!"".equals(attributes.trim())) write(" ");
+		write(attributes);
+		if (node.hasChildNodes()){
+			write(">");	
+			
+			String text = getTextContent((Element)node);
+			
+			if (!"".equals(text.trim())){				
+				write(text);				
+			}			
+			
+			String cdata = getCDATA((Element)node).trim();
+			if (!"".equals(cdata)){
+//				write(getIdent(identStr));
+				write("<![CDATA[");
+				write(cdata);
+				write("]]>");
+			}						
+		}
+		else{
+			write("/>");
+		}
+		out.flush();
+		
+	}
+
+	protected void postProcessNode(Node node) throws Exception {
+		if(node.getNodeType() != Node.ELEMENT_NODE) return;
+		ElementAdapter ea = new ElementAdapter((Element)node);
+		if (ea.getElement().hasChildNodes()){
+			if ("".equals(ea.getTextAndCDATA().trim())){
+				write(lineSeparator.concat(getIdent(identStr)));
+			}
+			write("</");
+			write(ea.getElementName());
+			write(">");
+		}	
+		out.flush();		
+	}
+	
+	public static void main(String[] args) throws Exception {
+		java.io.StringWriter w = new java.io.StringWriter();
+		DOMPrinter dw = new DOMPrinter(w);
+		dw.setPrintDeclaration(false);
+		Document d = BasicDom.parseXml("<root>\n" +
+				"\t<firstChild attrib1=\"ATTRIB1\">TEXT1--</firstChild>" +
+				"<secondChild >TTTasdf\n<![CDATA[**sdfsdf**]]>sdasdfsdaf</secondChild>" +
+				"</root>", null, false);
+		dw.write(w,d);
+		System.out.println(w);
+	}
+}
+////////////////////////////////////////////////////////////////////
 	/**
 	 * REST API: /download
 	 * 
