@@ -1,4 +1,215 @@
 
+import java.util.Vector;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+
+public class StreamEditor {
+
+    // Substitution syntax
+    //[address]s/pattern/replacement/flags
+    private static final Pattern sedExprPattern =
+            Pattern.compile("(?s)([^\\\\])/(.*[^\\\\])/(.*[^\\\\]?)/(.+)");
+
+    private static final Pattern grpRefPattern =
+            Pattern.compile("\\\\(\\d+)");
+
+    private static final Pattern origStrPattern =
+            Pattern.compile("[^\\\\](&)");
+
+
+    public StreamEditor() {
+    }
+
+    /**
+     * Replace first instance of the /pattern/
+     *
+     * @param strBuff     originam string
+     * @param regexpr     pattern
+     * @param replacement
+     * @return modified string
+     */
+    public static StringBuffer replace(StringBuffer strBuff, String regexpr,
+                                       String replacement) {
+        return replace(strBuff, regexpr, replacement, "1");
+    }
+
+    /**
+     * Replace nth instance of the /pattern/
+     *
+     * @param strBuff     - originam string
+     * @param pattern
+     * @param replacement
+     * @param n           n - [1-9]* or ([0-9]+) Replace nth instance of /pattern/<br>
+     *                    g - (global) Replace all instances of the /pattern/
+     * @return modified string
+     */
+    public static StringBuffer replace(StringBuffer strBuff, String pattern,
+                                       String replacement,
+                                       String n) {
+        Pattern p = Pattern.compile(pattern);
+        Matcher m = p.matcher(strBuff);
+        StringBuffer sb = new StringBuffer();
+        int count = 0;
+        while (m.find()) {
+            count++;
+            if ((count < 10 && n.indexOf("" + count) > -1) ||
+                    n.indexOf("(" + count + ")") > -1 ||
+                    n.indexOf("g") > -1) {
+                m.appendReplacement(sb, replacement);
+            }
+        }
+        m.appendTail(sb);
+        //System.out.println(sb);
+        return sb;
+    }
+
+    public static String strEdit(String str, String sExpression) {
+        //System.out.println("str:>>" + str + "<<");
+        //System.out.println("bool: " +
+        //                   sedExprPattern.matcher(sExpression).matches()  );
+
+        StringBuffer strBuff = new StringBuffer(str);
+        StringBuffer sb = new StringBuffer();
+
+        //Validate and prse sExpression
+        //and extract sed expression elements
+        Matcher sm = sedExprPattern.matcher(sExpression);
+        sm.reset();
+        if (sm.find(0)) {
+
+            String cmd = sm.group(1);
+            //System.out.println("cmd: " + cmd);
+
+            String pattern = sm.group(2);
+            //System.out.println("pattern: " + pattern);
+
+            String replacement = sm.group(3);
+            //System.out.println("replacement: " + replacement);
+
+            String flags = sm.group(4);
+            //System.out.println("flags: " + flags);
+
+            ///////////////////////////////////////////
+            //Process stream
+            //===================================
+            Pattern p = Pattern.compile(pattern);
+            //===================================
+
+            Matcher m = p.matcher(strBuff);
+            int count = 0;
+            while (m.find()) {
+                count++;
+                if ((count < 10 && flags.indexOf("" + count) > -1) ||
+                        flags.indexOf("(" + count + ")") > -1 ||
+                        flags.indexOf("g") > -1) {
+                    m.appendReplacement(sb,
+                            prepareReplacement(m, replacement, str));
+                }
+            }
+            m.appendTail(sb);
+        } else {
+            System.out.println("Error in sed expression formatting!");
+            System.out.println("sExpression:>>" + sExpression + "<<");
+            return str;
+        }
+        return sb.toString();
+
+    }
+
+    /**
+     * @param str   String to be modified
+     * @param sArgs command/pattern/replacement/[flags]<br>
+     *              command:<br>
+     *              s - substitute (only implemented command for now, gdrapic 2003/04/30)<br>
+     *              flags:<br>
+     *              n - "[1-9]*" or "([0-9]+)*" Replace nth instance of /pattern/. Default value is 1<br>
+     *              g - (global) - Replace all instances of the /pattern/<br>
+     *              flags examples: 24(12)(17) - replaces 2nd, 4th, 12th and 17th occurance of the pattern <br><br>
+     *              sed Examples:<br>
+     *              1) sed("1a-2a-3a-4a-5a-6a-7a-8a-9a-10a-11a-12a-13a-14a-15a-16a-17a-18a-19a-20a",<br>
+     *              "s/a/b/14(12)(14)");<br> replaces: 1st, 4th 12th and 14th instance<br>
+     *              OUTPUT: 1b-2b-3a-4b-5a-6a-7a-8a-9a-10a-11a-12b-13a-14b-15a-16a-17a-18a-19a-20a
+     * @return modified str
+     */
+    public static synchronized String sed(String str, String sArgs) {
+        // sArgs ="sedExpr1 -e [sedExpr2]  ... [-e sedExprN]";
+        // sed(str, sArgs);
+
+        try {
+            sArgs = sArgs.replaceAll("\\s", " ");
+            String[] exps = sArgs.split(" +-e +");
+            for (int i = 0; i < exps.length; i++) {
+            	if(exps[i]!=null && !exps[i].trim().equals("")){
+            		str = strEdit(str, exps[i]);
+            	}
+            }
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+        }
+        return str;
+    }
+
+    private static String prepareReplacement(Matcher m,
+                                             String replacement,
+                                             String str) {
+
+        Matcher grpRefMatch = grpRefPattern.matcher(replacement);
+
+        StringBuffer sbReplacement = new StringBuffer();
+        while (grpRefMatch.find()) {
+            String r = m.group(Integer.parseInt(grpRefMatch.group(1)));
+            grpRefMatch.appendReplacement(sbReplacement, r);
+        }
+        grpRefMatch.appendTail(sbReplacement);
+
+        // Substitutes '&' by original string 'str' NOTE: capture original
+        // string and keep it unchanged to the end of the substitution.
+        Matcher ma = origStrPattern.matcher(sbReplacement);
+
+        Vector endIdxs = new Vector();
+        while (ma.find()) {
+            endIdxs.add(new Integer(ma.end()));
+        }
+
+        int endIdx;
+        for (int i = endIdxs.size() - 1; i > -1; i--) {
+            endIdx = ((Integer) endIdxs.get(i)).intValue();
+            sbReplacement = sbReplacement.replace(endIdx - 1, endIdx, str);
+        }
+
+        return sbReplacement.toString();
+    }
+
+    public static void main(String[] args) {
+        StreamEditor streamEditor1 = new StreamEditor();
+        System.out.println("StreamEditor.sed(\"boo:and:foo:\",\"s/:/-/2\") \n>> output: " +
+                StreamEditor.sed("boo:and:foo:", "s/:/-/2"));
+
+        System.out.println(sed("1a-2a-3a-4a-5a-6a-7a-8a-9a-10a-11a-12a-13a-14a-15a-16a-17a-18a-19a-20a",
+                "s/a/b/14(12)(14)"));
+        System.out.println(sed("1a-2a-3a-4a-5a-6a-7a-8a-9a-10a-11a-12a-13a-14a-15a-16a-17a-18a-19a-20a",
+                "s/(.)\\d+/:letter \\1, >>&<</g"));
+
+        String htmlSrc = "some text <a HREF=\"/tfl/home.cfm\">link</a> \n" +
+                "some another text <a href=\"/tfl/home.cfm\">second link</a> \n" +
+                "some text <img src=\"/tfl/home.cfm\">link</a> \n";
+
+        System.out.println("htmlSrc:\n" + htmlSrc);
+        System.out.println("sedExpr: " +
+                "s/(?si)(href|src)=.\\/tfl/\\1=\"http:\\/\\/www.library.com\\/tfl/g");
+        System.out.println("output: \n" +
+                StreamEditor.sed(htmlSrc,
+                        "s/(?si)(href|src)=.\\/tfl/\\1=\"http:\\/\\/www.fundlibrary.com\\/tfl/g"));
+        System.out.println(ReUtils.isMatching("some text <a href=\"/tfl/home.cfm\">link</a> ",
+                "(.*<a href=\\\")(\\/tfl\\/)(home.cfm.*)"));
+
+        String sExpr = "s/(?si)(.*)<tbody><tr><td>(.*)<\\/td><td>(.*)<\\/td><td>(.*)<\\/td><\\/tr><\\/tbody>(.*)/ A: \\2 | B: \\3 | C: \\4 /g";
+
+    }
+}
+/////////////////////////////////////////////////////////
 import java.io.File;
 
 // Depth first search of DOM Tree
