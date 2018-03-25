@@ -1,0 +1,1867 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/xsl" href="CDSTasksManual.xsl"?>
+<document type="" title="Task (TSK) Process - documentation">
+    <section contentType="overview" title="Overview of Task Processor">
+    	<paragraph><![CDATA[Task Processor Framework is set of predefined simple java components (building blocks) combined by XML based configuration into a business process.
+It provides a tool to business analysts to build a powerful business case.
+
+It integrates configuration, process flow, documentation, versioning, version authorization, etc.  
+
+Infinite number of custom activities could be added easily to the framework if required.
+
+It is challenging to store, configure and maintain complex business process with hierarchical structures using database tables. 
+Very often a simple changes in the process require modifications to be done in java source code and database schema.
+For example with table based approach it would be difficult to configure process that involves multiple FTP transfers of multiple files to multiple remote servers.
+Adding option to deliver files by email attachments with possibility to zip them if file size exceeds limit could require code changes along with DB schema changes.
+
+This issue has initiated idea of creating a framework which does not require any database schema or code changes in case of simple process change.
+
+Table based configuration is difficult to follow while XML based approach offers very clear and easy way to describe hierarchical relationship between components adding clarity to the process flow. It significantly improves work on configuration changes by bringing all details at one place.
+		]]></paragraph>
+
+		<paragraph><![CDATA[]]></paragraph>
+		<paragraph><![CDATA[]]></paragraph>
+ 	</section>
+	<section contentType="expressions"  title="Expression Framework ">
+		<paragraph>
+			<![CDATA[
+	XML based configuration is enriched with expression evaluation framework
+	that adds dynamic to configuration details. The configuration values could
+	reference system configuration details stored in database,
+	runtime values created in java code or Workflow properties set explicitly in Workflow configuration.
+		]]>
+		</paragraph>
+		<paragraph><![CDATA[....]]></paragraph>
+		<paragraph><![CDATA[...]]></paragraph>
+
+		<section contentType="commonAttributes"  title="Boolean Expressions">
+			<paragraph><![CDATA[
+Syntax:
+Comparing Strings: [<STR1>~(GT|LT|EQ|NEQ|GE|LE|IN|NOT IN)~<STR2>]
+Comparing Numbers: [[num]<NUM1>~(GT|LT|EQ|NEQ|GE|LE|IN|NOT IN)~<NUM2>]
+
+Grouping: pair of ( ) - ([a~EQ~b] && [c~EQ~d]) || !([a~EQ~b] && [c~EQ~d])
+
+Operands:
+	&& - AND
+	|| - OR
+	!  - NOT
+
+Operators: (GT|LT|EQ|NEQ|GE|LE|IN|NOT IN)
+	GT		- Greather than
+	LT		- Less than
+	EQ		- Equals
+	NEQ		- Not Equals
+	GE		- Greather than OR Equals
+	LE		- Less then OR Equals
+	IN		- [a~IN~b,c,d] the same as a~EQ~b OR a~EQ~c OR a~EQ~d)
+	NOT IN	- [a~NOT IN~b,c,d] the same as [a~NEQ~b] && [a~NEQ~c] && [a~NEQ~d]
+
+Modes: (NUM|STR) - (case insensitive)
+Mode instructs interpreter how to compare two values.
+
+ AUTO:  (default) - [${val1}~EQ~${val1}] If Mode is not defined interpreter automatically defines compare method.
+ 	- if both sides are numeris - compares as numerics
+ 	- if one or both are not numerics - compares as strings
+
+ NUM: compares as numerics
+ 	- if one or both are not numerics - returns false
+
+ STR: compares as string
+ 	- if both are numerics
+				]]></paragraph>
+				<paragraph><![CDATA[...]]></paragraph>
+				<examples>
+					<example>
+					<![CDATA[
+Compares as Strings:
+
+	Is string 'a' equals to string 'b'
+	[a~EQ~b]   - returns false
+
+	Is string 'a' equals to '' (empty string)
+	[a~EQ~]   - returns false
+
+	Comparing number and string.
+	[2~GT~<Str1>]  - returns ? - depends of <Str1> value
+	[[num]2~GT~<Str1>]  - returns false
+
+	If numbers are compared as a strings '2' is greater than String '10'
+	[[STR]2~LT~10] - returns false
+	  	           Ordering of numbers as a string values gives (1,10,11,12...,2,20,21...)
+
+Compares as Numbers:
+	[2~LT~10]       - returns true
+
+	[[NUM]2~LT~10]  returns true
+
+Using Operands:
+	![a~EQ~b] - returns true
+	[a~EQ~b] - returns true
+	![a~EQ~b] - returns true
+
+Sample of complex boolean expression:
+	(
+		(
+			[${SCS_DIFF_PERC}~NEQ~null] &&
+			!([[num]${SCS_DIFF_PERC}~GT~-${CHANGE_PERCENTAGE}] &&
+			[[num]${SCS_DIFF_PERC}~LT~${CHANGE_PERCENTAGE}]
+		)
+	)
+	||
+	(
+		[${FNL_DIFF_PERC}~NEQ~null] &&
+		!(
+			[[num]${FNL_DIFF_PERC}~GT~-${CHANGE_PERCENTAGE}] && [[num]${FNL_DIFF_PERC}~LT~${CHANGE_PERCENTAGE}]
+		)
+	)
+
+				]]>
+					</example>
+				</examples>
+	 		</section>
+			<section contentType="functions"  title="built in functions">
+				<section contentType="function" title="calc">
+					<paragraph><![CDATA[${%calc()}]]></paragraph>
+					<examples>
+						<example>
+						<![CDATA[*]]>
+						</example>
+				</examples>
+			</section>
+			<section contentType="function" title="letterCap">
+				<paragraph><![CDATA[${%letterCap()}]]></paragraph>
+			</section>
+			<section contentType="function" title="formatDate">
+				<paragraph><![CDATA[${%formatDate()}]]></paragraph>
+			</section>
+			<section contentType="function" title="test">
+				<paragraph><![CDATA[${%test()}]]></paragraph>
+			</section>
+
+			<paragraph><![CDATA[....]]></paragraph>
+			<paragraph><![CDATA[....]]></paragraph>
+			<paragraph><![CDATA[...]]></paragraph>
+
+			<section title="Examples">
+				<paragraph><![CDATA[....]]></paragraph>
+				<paragraph><![CDATA[....]]></paragraph>
+				<paragraph><![CDATA[...]]></paragraph>
+			</section>
+		</section>
+
+ 	</section>
+
+ 	<section contentType="taskProperties" title="Task Properties">
+		<paragraph><![CDATA[
+All properties available to the Tak Process are stored into Task Processor Context
+which is used as a Task Global storage for properties and runtime java objects referenced by a key.
+
+It is implemented by com.bpadomain.support.utils.evaluators.ParserContext class.
+
+At cretion of ParserContext object, System Properties (java.lang.System.getProperties())
+are loaded.
+
+Also Application, Source System, And Process Properties are available at runtime.
+
+The task local properties are set through "property" task.
+(<property key="emailTo" value="Goran.Drapic@td.com"/>)
+
+The Most Frequent Property used in Task Framework is:
+
+${REPORTING_DATE} - by default it is evalueted in 'yyyyMMdd' format.
+
+REPORTING_DATE Format could be chanhed by the expression:
+
+${%formatDate('<dateString>','<fromFormat>','<toFormat>')}
+
+Example: ${%formatDate('${REPORTING_DATE}','yyyyMMdd','MMM dd, yyyy')}
+		]]></paragraph>
+		
+		<section contentType="varijables" title="Process Info Properties">
+			<paragraph><![CDATA[
+${REPORTING_DATE} - 'yyyyMMdd' format
+${PROCESS_CLASS_ID}
+${PROCESS_ID}
+${SYSTEM_NAME}
+${SYSTEM_ID}
+${PROCESS_TYPE}
+			]]></paragraph>
+		</section>
+		
+		<section contentType="varijables" title="System Properties">
+			<paragraph><![CDATA[
+System properties:
+
+** ${SYS:..key..} - Description of Associated Value **
+
+${SYS:java.version} - Java Runtime Environment version
+${SYS:java.vendor} - Java Runtime Environment vendor
+${SYS:java.vendor.url} - Java vendor URL
+${SYS:java.home}  - Java installation directory
+${SYS:java.vm.specification.version}  - Java Virtual Machine specification version
+${SYS:java.vm.specification.vendor}  - Java Virtual Machine specification vendor
+${SYS:java.vm.specification.name}  -  Java Virtual Machine specification name
+${SYS:java.vm.version}  - Java Virtual Machine implementation version
+${SYS:java.vm.vendor}  - Java Virtual Machine implementation vendor
+${SYS:java.vm.name}  - Java Virtual Machine implementation name
+${SYS:java.specification.version}  - 	Java Runtime Environment specification version
+${SYS:java.specification.vendor}  - Java Runtime Environment specification vendor
+${SYS:java.specification.name}  - Java Runtime Environment specification name
+${SYS:java.class.version}  - Java class format version number
+${SYS:java.class.path}  -  Java class path
+${SYS:java.library.path}  - List of paths to search when loading libraries
+${SYS:java.io.tmpdir}  - Default temp file path
+${SYS:java.compiler}  - Name of JIT compiler to use
+${SYS:java.ext.dirs}  - Path of extension directory or directories
+${SYS:os.name}  - Operating system name
+${SYS:os.arch}  - Operating system architecture
+${SYS:os.version}  - Operating system version
+${SYS:file.separator}  - 	File separator ("/" on UNIX)
+${SYS:path.separator} 	- Path separator (":" on UNIX)
+${SYS:line.separator} 	- Line separator ("\n" on UNIX)
+${SYS:user.name} 	- User's account name
+${SYS:user.home} 	- User's home directory
+${SYS:user.dir}  - User's current working directory
+		]]></paragraph>
+		</section>
+
+		<section contentType="varijables" title="Appllication Properties (APP_SYSTEM_CONFIG)">
+			<paragraph><![CDATA[
+Current set (as of Feb. 04 2011) of properties from from APP_SYSTEM_CONFIG table
+are listid (for developer convinience) in table below.
+
+NOTE:
+	* Changes in APP_SYSTEM_CONFIG table are automatically available to the Task Context.
+	* The Application Properties Could be explicitly overwritten by 'property' task:
+	(For example: <property key="NOTIFIER_RECIPIENTS" value="Goran.Drapic@td.com"/>)
+
+${APP_PROCESS_LOG}
+${ARCHIVED_LOG_DIRECTORY_LOCATION}
+${ARCHIVER_ACTIVE}
+${PROCESS_FLAG}
+${TIME_OUT}
+${UPLOAD_MODE}
+${CONTROLLER_ADDRESS}
+${CONTROLLER_JNDI_PORT}
+${COPY_LINK_FLAG}
+${DELETE_LOOK_BACK}
+${EMAIL_FROM_ADDRESS}
+${ENVIRONMENT}
+${ER3_COUNT_TOLERANCE}
+${FTP_INFO}
+${INPUT_FILES_DIR}
+${LOG_ARCHIVER_TIME_FRAME}
+${LOG_DIRECTORY_LOCATION}
+${MAX_SLOW_RUNNING_PROCESSES}
+${NEW_ID_LOGIC}
+${NOTIFIER_ACTIVE}
+${NOTIFIER_RECIPIENTS}
+${NUMBER_OF_WORKERS}
+${OUTPUT_FILES_DIR}
+${SMTP_HOST}
+${SSH_KEY_PATH}
+${START_SCHEDULER}
+${START_TRIGGER}
+${START_WORKER_ON_CONTROLLER}
+${WRITE_BINDING_INFO}
+
+			]]></paragraph>
+
+
+		</section>
+		<section contentType="varijables" title="Source System Properties (APP_SOURCE_SYSTEM_CONFIG table for current SYSTEM_ID)">
+			<paragraph><![CDATA[
+Vaalues from APP_SOURCE_SYSTEM_CONFIG table for current TaskProcessor SYSTEM_ID
+are available to Task processor.
+
+For Example: -- TERMINATE_LINKS=${TERMINATE_LINKS} --
+Outputs: --TERMINATE_LINKS=true --
+
+* The APP_SOURCE_SYSTEM_CONFIG Could be explicitly overwritten by 'property' task:
+	(For example: <property key="TERMINATE_LINKS" value="false"/>)
+
+
+			]]></paragraph>
+		</section>
+
+		<section contentType="varijables" title="Task Properties">
+			<paragraph><![CDATA[
+It is convinient if frequently changed values are set through 'property' task.
+
+Example:
+It is convinient to pool email recepient list to the top and edited if required, than look
+
+<property key="emailTo" value="Goran.Drapic@td.com"/>
+...
+..
+	<email to="${emailTo}" ..
+			]]></paragraph>
+		</section>
+	</section>
+
+	<section title="Task Library">
+		<section contentType="commonAttributes"  title="Task Common Attributes">
+			<paragraph><![CDATA[...]]></paragraph>
+			<paragraph><![CDATA[...]]></paragraph>
+ 		</section>
+
+		<!-- COMPONENT: tasks -->
+		<component name="tasks" title="" class="com.bpadomain.tasks.MainTask">
+			<description><![CDATA[Container for all Tasks]]></description>
+			<parameters>
+				<parameter type="attribute" name="wait" required="no" defaultValue="false">
+					<description><![CDATA[If ovwerall stattus is 'SCS' sets final status to 'WAT']]></description>
+				</parameter>
+			</parameters>
+			<examples>
+				<example>
+				<![CDATA[
+<tasks
+	description="JMS Queue receiver"
+	wait="true">
+
+	... task 1
+
+	.... task N
+
+</tasks>
+				]]>
+				</example>
+			</examples>
+		</component>
+
+		<!-- COMPONENT: NOTE -->
+		<component  name="NOTE" title="" class="N/A">
+			<description><![CDATA[
+Task Note is useful to describe important details or
+instructions about the Process.
+It does not execute anything and there is no implementation Class.
+		]]></description>
+			<parameters>
+				<parameter type="text" name="" required="yes">
+					<defaultValue></defaultValue>
+					<description><![CDATA[Text ]]></description>
+				</parameter>
+			</parameters>
+			<examples>
+				<example>
+				<![CDATA[
+<NOTE >
+******************************************************************
+CdRepVarianceVerificationTask logic defines which email message will be send.
+Input parameter is 'reportFile' that points to report (CSV) generated by PRP processor.
+The report contains data from result set of the verification query executed in PRP
+******************************************************************
+</NOTE>
+				]]>
+				</example>
+			</examples>
+		</component>
+
+		<!-- COMPONENT:  property -->
+		<component name="property" title="" class="com.bpadomain.tasks.components.PropertyTask">
+			<description>
+				Sets global tasks parameter. There is no action associated.
+				The expression syntax to retrieve value referenced by property key
+				<b>... ${KEY} ...</b>
+			</description>
+			<parameters>
+				<parameter type="attribute" name="key" required="yes">
+						<description>reference to a value</description>
+						<defaultValue>n/a</defaultValue>
+				</parameter>
+				<parameter type="attribute" name="value" required="yes">
+						<description>one line value</description>
+						<defaultValue>n/a</defaultValue>
+				</parameter>
+				<parameter type="#text" required="no">
+					<description><![CDATA[used to set text (multiple lines) as a value
+					NOTE: if both attribute 'value' and #text are set, #text will be referenced by the property key.
+					]]></description>
+				</parameter>
+			</parameters>
+			<examples>
+				<example>
+					<description>Set single line value.</description>
+				<![CDATA[
+<property key="emailTo" value="Goran.Drapic@td.com"/>
+<property key="emailSubject" value="Hello"/>
+				]]>
+				</example>
+				<example>
+					<description>Set multiple line value.</description>
+				<![CDATA[
+<property key="EMAIL_MESSAGE">
+Hello ...!
+This is System generated email.
+Please do not reply!
+</property>
+
+<email to="${emailTo}" subject="${emailSubject}" >
+${EMAIL_MESSAGE}
+</email>
+				]]>
+				</example>
+			</examples>
+		</component>
+
+
+		<!-- COMPONENT: task -->
+		<component name="task" title="" class="com.bpadomain.tasks.GenericTask">
+			<description><![CDATA[Custom Task]]></description>
+			<parameters>
+				<parameter type="attribute" name="className" required="yes">
+					<description><![CDATA[Implementation Class]]></description>
+				</parameter>
+				<parameter type="attribute" name="runAsThread" required="no">
+						<description>Runs as a thread.</description>
+						<defaultValue>false</defaultValue>
+				</parameter>
+				<parameter type="attribute" name="numberOfThreads" required="no">
+						<description>Defines Number Of Threads.</description>
+						<defaultValue>0</defaultValue>
+				</parameter>
+			</parameters>
+			<examples>
+				<example>
+				<![CDATA[
+	<task
+		className="com.bpadomain.tasks.systems.cdrep.VerificatioTask"
+		description="Defines Email Message Content"
+		reportFile="${%srcFile(LOCAL_FILE)}"/>
+				]]>
+				</example>
+			</examples>
+		</component>
+
+		<!-- COMPONENT: file -->
+		<component name="file" title="" class="com.bpadomain.tasks.components.FileTask">
+			<description><![CDATA[Creates File Object]]></description>
+			<parameters>
+				<parameter type="attribute" name="path" required="yes">
+					<description><![CDATA[Defines Absolute path to a file.]]></description>
+				</parameter>
+			</parameters>
+			<examples>
+				<example>
+				<![CDATA[
+	<file path="${LOCAL_FILE}"/>
+	<file path="${REMOTE_FILE_PATH}${REMOTE_FILE_NAME}"/>
+	<file path="${%srcFile(LOCAL_FILE_PATH,73)}${%srcFile(LOCAL_FILE_NAME,73)}"/>
+	<file path="${REMOTE_FILE_PATH}/Report.${REPORTING_DATE}.csv"/>
+				]]>
+				</example>
+			</examples>
+		</component>
+
+
+ 		<!-- COMPONENT: zip -->
+		<component name="zip" title="" class="com.bpadomain.tasks.components.ZipTask">
+			<description><![CDATA[
+* Creates zip a file.
+* Child nodes: file, zip, textFile
+* Parent nodes: tasks, atatck, zip, delete
+				]]></description>
+			<parameters>
+				<parameter type="attribute" name="path" required="yes">
+					<description><![CDATA[Defines Absolute path to the archive file.]]></description>
+				</parameter>
+				<parameter type="attribute" name="makedirs" required="no">
+					<description><![CDATA[boolean (true|false)
+					Creates directories referenced by the 'path' attribute
+					]]></description>
+					<defaultValue>false</defaultValue>
+				</parameter>
+				<parameter type="attribute" name="addRe" required="no">
+					<description><![CDATA[
+Apply File Filters
+ * Regular Expression defines pattern of the files to be zipped
+ * Example: addRe=".*\.(?i:xls|txt)$"  select Excel and text file types (with ignore case: xls,XLS, Xls ...)
+	NOTE: It matches only file names. It does not match directory paths!!!
+					]]></description>
+				</parameter>
+				<parameter type="attribute" name="skipRe" required="no">
+					<description><![CDATA[Regular Expression of the files or directories to be skipped]]></description>
+				</parameter>
+			</parameters>
+			<examples>
+				<example>
+				<![CDATA[
+	Zips a file for a given Reporting Date..
+	<zip path="${LOCAL_FILE}.${REPORTING_DATE}.zip">
+		<file path="${LOCAL_FILE}"/>
+	</zip>
+
+	Zipps all txt and xls files for a given Reporting Date
+	<zip path="${LOCAL_FILE}.${REPORTING_DATE}.zip" addRe=".*\.${REPORTING_DATE}\.(?i:xls|txt)$">
+		<file path="${LOCAL_FILE_PATH}"/>
+	</zip>
+				]]>
+				</example>
+			</examples>
+		</component>
+
+		<!-- COMPONENT: textFile -->
+		<component name="textFile" title="" class="com.bpadomain.tasks.components.TextFileTask">
+			<description><![CDATA[
+Writes text to a file.
+The 'textFile' body content gets written to the file defined by 'path' attribute.
+<textFile path="...">-- BODY --</textFile>
+	]]></description>
+			<parameters>
+				<parameter type="attribute" name="path" required="yes">
+					<description><![CDATA[Defines Absolute path to the text file.]]></description>
+				</parameter>
+
+				<parameter type="attribute" name="append" required="no">
+					<description><![CDATA[Append to the file defined by the 'path' attribute.]]></description>
+					<defaultValue>false</defaultValue>
+				</parameter>
+
+				<parameter type="attribute" name="makedirs" required="no">
+					<description><![CDATA[boolean (true|false)
+					Creates directories referenced by the 'path' attribute
+					]]></description>
+					<defaultValue>false</defaultValue>
+				</parameter>
+
+				<parameter type="#text" required="no">
+					<description><![CDATA[Text to be written to the file]]></description>
+				</parameter>
+
+			</parameters>
+			<examples>
+				<example>
+				<![CDATA[
+	Ceate check file..
+	<textFile
+		description="Create controll file"
+		path="/ftp_feed/app/ext/${%srcFile(LOCAL_FILE_NAME,73)}.CHECK">
+	The delivery CHECK File.
+	</textFile>
+
+	Appending multiple files to one.
+
+	1) READ FILE 1
+	<readTextFile
+		path="/path/to/file/SrcFile1.${REPORTING_DATE}.csv"
+		textKey="SrcFile1Content"
+	/>
+
+	2) WRITE FILE 1
+	<textFile
+		description="Master file, Writes SrcFile1Content"
+		path="/path/to/file/MasterFile.${REPORTING_DATE}.csv"
+		append="false"
+		>${SrcFile1Content}</textFile>
+
+	3) READ FILE 2, ignore if file does not exist
+	<readTextFile
+		description="The file is not mandatory.. Ignore if file does not exist."
+		ignoreError="true"
+		path="/path/to/file/SrcFile2.${REPORTING_DATE}.csv"
+		textKey="SrcFile2Content"
+	/>
+
+	4) WRITE TO FILE 1 IF FILE 2 EXISTS.
+	<textFile
+		description="Master file, Writes SrcFile1Content"
+		enabled="[${textKey}~NEQ~]"
+		path="/path/to/file/MasterFile.${REPORTING_DATE}.csv"
+		append="true"
+		>${SrcFile2Content}</textFile>
+
+				]]>
+				</example>
+			</examples>
+		</component>
+
+		<!-- COMPONENT: readTextFile -->
+		<component name="readTextFile" title="" class="com.bpadomain.tasks.components.ReadTextFileTask">
+			<description><![CDATA[
+Reads text file content into memory and puts the buffer into task ParserContext referenced by 'textKey' attribute.
+	]]></description>
+			<parameters>
+				<parameter type="attribute" name="path" required="yes">
+					<description><![CDATA[Defines Absolute path to the text file.]]></description>
+				</parameter>
+
+				<parameter type="attribute" name="textKey" required="yes">
+					<description><![CDATA[Reference to text content of the file ]]></description>
+					<defaultValue>N/A</defaultValue>
+				</parameter>
+
+				<parameter type="attribute" name="evaluate" required="no">
+					<description><![CDATA[Turns off expression evaluation of the file content.]]></description>
+					<defaultValue>true</defaultValue>
+				</parameter>
+
+			</parameters>
+			<examples>
+				<example>
+				<![CDATA[
+	Read file
+	<readTextFile
+		path="/path/to/file/SrcFile1.${REPORTING_DATE}.csv"
+		textKey="SrcFile1Content"
+	/>
+				]]>
+				</example>
+			</examples>
+		</component>
+
+		<!-- COMPONENT: renameFile -->
+		<component name="renameFile" title="" class="com.bpadomain.tasks.components.RenameFileTask">
+			<description><![CDATA[
+renames file.
+	]]></description>
+			<parameters>
+				<parameter type="attribute" name="path" required="yes">
+					<description><![CDATA[Defines Absolute path to the file to be renamed.]]></description>
+				</parameter>
+				
+				<parameter type="attribute" name="toPath" required="yes">
+					<description><![CDATA[Defines Absolute path to the destination file.]]></description>
+				</parameter>
+
+			</parameters>
+			<examples>
+				<example>
+				<![CDATA[
+	Rename file with current date stamp to file with reporting dtae stamp.
+	<renameFile 
+		description="Rename Source File to Current Reporting date"
+		path="${%srcFile(LOCAL_FILE_PATH,73)}SrcFile.${%date('yyyyMMdd')}.csv"
+		toPath="${%srcFile(LOCAL_FILE_PATH,73)}SrcFile.${REPORTING_DATE}.csv"/>
+				]]>
+				</example>
+			</examples>
+		</component>
+
+		<!-- COMPONENT: copyFile -->
+		<component name="copyFile" title="" class="com.bpadomain.tasks.components.CopyFileTask">
+			<description><![CDATA[
+Renames file.
+	]]></description>
+			<parameters>
+				<parameter type="attribute" name="path" required="yes">
+					<description><![CDATA[Defines Absolute path to the file to be copied.]]></description>
+				</parameter>
+				
+				<parameter type="attribute" name="toPath" required="yes">
+					<description><![CDATA[Defines Absolute path to the destination file.]]></description>
+				</parameter>
+
+			</parameters>
+			<examples>
+				<example>
+				<![CDATA[
+	Copy file with current date stamp to file with reporting dtae stamp.
+	<renameFile 
+		description="Copy Source File to Current Reporting date"
+		path="${%srcFile(LOCAL_FILE_PATH,73)}SrcFile.${%date('yyyyMMdd')}.csv"
+		toPath="${%srcFile(LOCAL_FILE_PATH,73)}SrcFile.${REPORTING_DATE}.csv"/>
+				]]>
+				</example>
+			</examples>
+		</component>
+
+		<!-- COMPONENT: delete -->
+		<component name="delete" title="" class="com.bpadomain.tasks.components.DeleteTask">
+			<description><![CDATA[
+* Delete files, Useful for Temporary Local Files Cleanup after processing..
+* Child nodes: file, zip, textFile
+* Parent nodes: tasks
+		]]></description>
+			<parameters>
+				<parameter type="attribute" name="file" required="no">
+					<description><![CDATA[Defines Absolute path to a file to be deleted.]]></description>
+				</parameter>
+				<parameter type="attribute" name="dir" required="no">
+					<description><![CDATA[Defines Absolute path to a directory to be deleted.]]></description>
+				</parameter>
+				
+				<parameter type="attribute" name="includesRe" required="no">
+					<description><![CDATA[Apply File Filters.]]></description>
+				</parameter>
+				
+				<parameter type="attribute" name="includesRe" required="no">
+					<description><![CDATA[Regular Expression of the files or directories to be excluded]]></description>
+				</parameter>
+				
+				<parameter type="childElement" name="file" required="no">
+					<description><![CDATA[Child element <file path="..."/>]]></description>
+				</parameter>
+
+			</parameters>
+			<examples>
+				<example>
+				<![CDATA[
+Examples:
+	
+	Delte a file for a given Reporting Date..
+	<delete file="${LOCAL_FILE_PATH}Report.${REPORTING_DATE}.zip"/>
+	
+	<delete 
+		description="Clean up tmp file"
+		file="/tmp/${%srcFile(LOCAL_FILE_NAME,73)}.codes.tmp"/>
+
+	Delte 2 files for a given Reporting Date..
+	<delete/>
+		<file path="${LOCAL_FILE_PATH}Report.${REPORTING_DATE}.zip"/>	
+		<file path="${LOCAL_FILE_PATH}Report.${REPORTING_DATE}.txt"/>	
+	</delete>
+	
+	Deletes all txt and xls files for a given Reporting Date
+	<delete dir="${LOCAL_FILE_PATH}" includesRe=".*\.${REPORTING_DATE}\.(?i:xls|txt)$"  ">
+	
+	<delete 
+		description="Clean up all CLIENT (73) Files"
+		dir="/ftp_feed/app/ext/"
+		includesRe=".*[\\/]bpa.[0-9]+.*$"
+	/>]]>
+				</example>
+			</examples>
+		</component>
+
+		<!-- COMPONENT: email -->
+		<component name="email" title="" class="com.bpadomain.tasks.components.email.EmailTask">
+			<description><![CDATA[
+			]]></description>
+			<parameters>
+				<parameter type="attribute" name="smtpHost" required="no">
+					<description><![CDATA[SMTP Host]]></description>
+					<defaultValue>${SMTP_HOST} from APP_SYSTEM_CONFIG table</defaultValue>
+				</parameter>
+				
+				<parameter type="attribute" name="username" required="no">
+					<description><![CDATA[Username]]></description>
+				</parameter>
+				
+				<parameter type="attribute" name="password" required="no">
+					<description><![CDATA[Password]]></description>
+				</parameter>
+				
+				<parameter type="attribute" name="to" required="yes">
+					<description><![CDATA[Email 'to' Recepient List separated by ';']]></description>
+				</parameter>
+				
+				<parameter type="attribute" name="cc" required="no">
+					<description><![CDATA[Email 'cc' Recepient List separated by ';']]></description>
+				</parameter>
+				
+				<parameter type="attribute" name="bcc" required="no">
+					<description><![CDATA[Email 'bcc' Recepient List separated by ';']]></description>
+				</parameter>
+				
+				<parameter type="attribute" name="from" required="no">
+					<description><![CDATA[Email address ]]></description>
+					<defaultValue>${EMAIL_FROM_ADDRESS} from APP_SYSTEM_CONFIG table</defaultValue>
+				</parameter>
+				
+				<parameter type="attribute" name="subject" required="yes">
+					<description><![CDATA[Email Subject]]></description>
+				</parameter>
+				
+				<parameter type="#text" required="no">
+					<description><![CDATA[Email message HTML formatted.]]></description>
+				</parameter>
+				
+				<parameter type="childElement" name="attach" required="no">
+					<description><![CDATA[Child element 'attach'.						
+				Example:
+				<attach>
+					<file path="/path/to/file_1.csv"/>
+					<file path="/path/to/file_2.csv"/>
+					<zip path="${LOCAL_FILE}.${REPORTING_DATE}.zip">
+						<file path="${LOCAL_FILE}"/>
+					</zip>
+				</attach>
+					]]></description>
+				</parameter>
+
+			</parameters>
+			<examples>
+				<example>
+				<![CDATA[<email 
+	description="Emails Report"
+	to="Goran.Drapic@tdsecurities.com;Sasha.Bratic@tdsecurities.com;"
+	subject="${ENV} - Manager LogonID Report as of ${RPT_DATE}">
+<b>TD Securities - This is system-generated email. Please do not reply.</b>
+	<attach >
+		<file path="${LOCAL_FILE}"/>
+	</attach>
+</email>]]>
+				</example>
+<example>
+				<![CDATA[<email 
+	description="STATUS Report Email"		
+	enabled="true"
+	to="${emailTo}"
+	from="${emailFrom}"
+	subject="${subject}">
+<HTML>
+<HEAD>
+${CSS_STYLE}
+ </HEAD>
+ <BODY>
+ 	<TABLE>
+ 	<caption ><b>Status Report</b></caption> 
+	${STATUS_HTML}<br>
+	</TABLE>	
+</BODY>
+</HTML>
+</email>]]>
+				</example>				
+			</examples>
+		</component>
+
+		<!-- COMPONENT: attach -->
+		<component name="attach" title="" class="com.bpadomain.tasks.components.email.EmailAttachmentTask">
+			<description><![CDATA[Defines email attahement files. 
+			Can be use only as 'email' child task.
+			At least one file needs to be defined as a child.
+			]]></description>
+			<parameters>
+				<parameter type="attribute" name="dynamic" required="no">
+					<description><![CDATA[Dynamic, dynamic="whatewer is in EMAIL_ATTACHMENT_LIST is evaluated" ]]></description>
+					<defaultValue>Not existing</defaultValue>
+				</parameter>
+				
+				<parameter type="attribute" name="maxnumber" required="no">
+					<description><![CDATA[Max Number of attached files..]]></description>
+					<defaultValue>Not existing</defaultValue>
+				</parameter>
+			
+				<parameter type="childElement" name="file" required="yes">
+					<description><![CDATA[Child element: '<file ../>', at leas one]]></description>
+				</parameter>
+				
+				<parameter type="childElement" name="zip" required="yes">
+					<description><![CDATA[Child element: '<zip ../>']]></description>
+				</parameter>
+			</parameters>
+			<examples>
+				<example>
+				<![CDATA[
+<attach>
+	<file path="/path/to/file_1.csv"/>
+	<file path="/path/to/file_2.csv"/>
+	<zip path="${LOCAL_FILE}.${REPORTING_DATE}.zip">
+		<file path="${LOCAL_FILE}"/>
+	</zip>
+</attach>]]>
+				</example>		
+			</examples>
+		</component>
+		
+		<!-- COMPONENT: ftp -->
+		<component name="ftp" title="" class="bpadomain.tasks.components.ftp.FtpTask">
+			<description><![CDATA[Defines FTP connection parameters.]]></description>
+			<parameters>
+				<parameter type="attribute" name="url" required="yes">
+					<description><![CDATA[URL of the FTP Server.]]></description>
+				</parameter>
+				
+				<parameter type="attribute" name="username" required="no">
+					<description><![CDATA[Username]]></description>
+				</parameter>
+				
+				<parameter type="attribute" name="password" required="no">
+					<description><![CDATA[Password]]></description>
+				</parameter>
+				
+				<parameter type="attribute" name="type" required="no">
+						<description>PASV or ACTIVE</description>
+						<defaultValue>PASV</defaultValue>
+				</parameter>
+				
+				<parameter type="attribute" name="mode" required="no">
+						<description>BINARY ASCII </description>
+						<defaultValue>BINARY</defaultValue>
+				</parameter>
+				
+				<parameter type="childElement" name="get" required="no">
+					<description><![CDATA[Child element: '<get ../>']]></description>
+				</parameter>
+				
+				<parameter type="childElement" name="put" required="no">
+					<description><![CDATA[Child element: '<put ../>']]></description>
+				</parameter>
+				
+				<parameter type="childElement" name="quote" required="no">
+					<description><![CDATA[Child element: '<quote ../>']]></description>
+				</parameter>
+	
+			</parameters>
+			<examples>
+				<example>
+				<![CDATA[
+<ftp 
+	enabled="true"
+	description="Uplad file to files.bpadomain.ca"
+	mode="PASV"
+	type="BINARY"
+	url="files.bpadomain.ca"
+	username="up_test">
+	password="*******"
+	<put 
+		checkFileSize="true"
+		checkfile="true"		
+		localFileName="${%srcFile(LOCAL_FILE_NAME,324)}.tmp"
+		localFilePath="/tmp/"
+		remoteFileName="bpa.${%srcFile(LOCAL_FILE_NAME,324)}"
+		remoteFilePath="/ftp_feed/up_test/test/"/>
+</ftp>
+				]]>
+				</example>
+			</examples>
+		</component>
+
+<!-- COMPONENT: get -->
+		<component name="get" title="" class="com.bpadomain.tasks.components.ftp.FtpGetTask">
+			<description><![CDATA[
+			Download file from FTP. 
+			Child of 'ftp' task]]></description>
+			<parameters>
+				
+				<parameter type="attribute" name="localFilePath" required="yes">
+					<description><![CDATA[Local File Path]]></description>
+				</parameter>
+				
+				<parameter type="attribute" name="localFileName" required="yes">
+					<description><![CDATA[Local File Name]]></description>
+				</parameter>
+							
+				<parameter type="attribute" name="remoteFilePath:" required="yes">
+					<description><![CDATA[Remote File Path]]></description>
+				</parameter>
+
+				<parameter type="attribute" name="remoteFileName" required="yes">
+					<description><![CDATA[Remote File Name]]></description>
+				</parameter>
+				
+				<parameter type="attribute" name="makeLocalDirs" required="no">
+					<description><![CDATA[Make Local Dirs]]></description>
+					<defaultValue>FALSE</defaultValue>
+				</parameter>
+				
+				<parameter type="attribute" name="checkfile" required="no">
+						<description>Create check file</description>
+						<defaultValue>TRUE</defaultValue>
+				</parameter>
+				
+				<parameter type="attribute" name="checkFileSize:" required="no">
+						<description>
+						Check remote file size. 
+						Throws exception if remote file size and local file size do not match
+						*** NOTE: Works only in BINARY mode.
+						</description>
+						<defaultValue>TRUE</defaultValue>
+				</parameter>
+	
+			</parameters>
+			<examples>
+				<example>
+				<![CDATA[
+<ftp 
+	enabled="true"
+	description="Uplad file to files.bpadomain.ca"
+	mode="PASV"
+	type="BINARY"
+	url="files.bpadomain.ca"
+	username="up_test">
+	password="*******"
+	<get 
+		checkFileSize="true"
+		checkfile="true"		
+		localFileName="${%srcFile(LOCAL_FILE_NAME,324)}.tmp"
+		localFilePath="/tmp/"
+		remoteFileName="bpa.${%srcFile(LOCAL_FILE_NAME,324)}"
+		remoteFilePath="/ftp_feed/up_test/test/"/>
+</ftp>
+				]]>
+				</example>
+			</examples>
+		</component>
+		
+		<!-- COMPONENT: put -->
+		<component name="put" title="" class="com.bpadomain.tasks.components.ftp.FtpPutTask">
+			<description><![CDATA[
+			Uploads file from FTP server. 
+			Child of 'ftp' task]]></description>
+			<parameters>
+				
+				<parameter type="attribute" name="localFilePath" required="yes">
+					<description><![CDATA[Local File Path]]></description>
+				</parameter>
+				
+				<parameter type="attribute" name="localFileName" required="yes">
+					<description><![CDATA[Local File Name]]></description>
+				</parameter>
+							
+				<parameter type="attribute" name="remoteFilePath:" required="yes">
+					<description><![CDATA[Remote File Path]]></description>
+				</parameter>
+
+				<parameter type="attribute" name="remoteFileName" required="yes">
+					<description><![CDATA[Remote File Name]]></description>
+				</parameter>
+				
+				<parameter type="attribute" name="makeRemoteDirs" required="no">
+					<description><![CDATA[Make Remote Dirs]]></description>
+					<defaultValue>FALSE</defaultValue>
+				</parameter>
+								
+				<parameter type="attribute" name="checkfile" required="no">
+						<description>Create check file</description>
+						<defaultValue>TRUE</defaultValue>
+				</parameter>
+				
+				<parameter type="attribute" name="checkFileSize:" required="no">
+						<description>
+						Check remote file size. 
+						Throws exception if remote file size and local file size do not match
+						*** NOTE: Works only in BINARY mode.
+						</description>
+						<defaultValue>TRUE</defaultValue>
+				</parameter>
+	
+			</parameters>
+			<examples>
+				<example>
+				<![CDATA[
+<ftp 
+	enabled="true"
+	description="Uplad file to files.bpadomain.ca"
+	mode="PASV"
+	type="BINARY"
+	url="files.bpadomain.ca"
+	username="up_test">
+	password="*******"
+	<put
+		checkFileSize="true"
+		checkfile="true"		
+		localFileName="${%srcFile(LOCAL_FILE_NAME,324)}.tmp"
+		localFilePath="/tmp/"
+		remoteFileName="bpa.${%srcFile(LOCAL_FILE_NAME,324)}"
+		remoteFilePath="/ftp_feed/up_test/test/"/>
+</ftp>
+				]]>
+				</example>
+			</examples>
+		</component>
+
+		<!-- COMPONENT: quote -->
+		<component name="quote" title="" class="com.bpadomain.tasks.components.ftp.FtpQuoteTask">
+			<description><![CDATA[
+			Sends quote command to FTP server. 
+			Child of 'ftp' task]]></description>
+			<parameters>
+				<parameter type="#text" required="yes">
+					<description><![CDATA[Sends quote command to FTP server]]></description>
+				</parameter>				
+			</parameters>
+			<examples>
+				<example>
+				<![CDATA[
+	<ftp 	
+		password="******"
+		url="ftpprd.tdbank.ca"
+		username="XFA0QH01">
+		<quote>quote site lrecl=${get key='lrecl'} recfm=fb cy pri=50 sec=10</quote>
+	</ftp>
+				]]>
+				</example>
+			</examples>
+		</component>
+
+		<!-- COMPONENT: sftp -->
+		<component name="sftp" title="" class="com.bpadomain.tasks.components.ftp.SFtpTask">
+			<description><![CDATA[SFTP - Secure File Transfer.]]></description>
+			<parameters>
+				<parameter type="attribute" name="url" required="yes">
+					<description><![CDATA[URL of the FTP Server.]]></description>
+				</parameter>
+				
+				<parameter type="attribute" name="username" required="no">
+					<description><![CDATA[Username]]></description>
+				</parameter>
+				
+				<parameter type="attribute" name="password" required="no">
+					<description><![CDATA[Password]]></description>
+				</parameter>
+				
+				<parameter type="attribute" name="keyFile" required="no">
+						<description>SSH Public Key File path</description>						
+				</parameter>
+										
+				<parameter type="childElement" name="cmd" required="yes">
+					<description><![CDATA[Child element: '<cmd ../>..</cmd>']]></description>
+				</parameter>
+				
+			</parameters>
+			<examples>
+				<example>
+				<![CDATA[
+<sftp 
+	enabled="true"
+	description="Uplad file to fileas.bpadomain.ca"
+	url="files.bpadomain.ca"
+	username="up_test">
+	password="*******"
+	<cmd responseKey="fileListing">ls</cmd>
+</sftp>
+				]]>
+				</example>
+			</examples>
+		</component>
+
+		<!-- COMPONENT: cmd -->
+		<component name="cmd" title="" class="com.bpadomanin.tasks.components.ftp.SFtpCommandTask">
+			<description><![CDATA[SFTP - Command
+			Child of 'sftp' task]]></description>
+			<parameters>
+				<parameter type="#text" required="yes">
+					<description><![CDATA[SFTP Command
+Available commands:		    
+		get remote-path [local-path]  		- Download file
+		get-resume remote-path [local-path] - Resume to download file.
+		get-append remote-path [local-path] - Append remote file to local file
+		ln oldpath newpath            		- Symlink remote file
+		lpwd                          		- Print local working directory
+		ls [path]                     		- Display remote directory listing
+		mkdir path                    		- Create remote directory
+		put local-path [remote-path]  		- Upload file
+		put-resume local-path [remote-path] - Resume to upload file
+		put-append local-path [remote-path] - Append local file to remote file.
+		pwd                           		- Display remote working directory
+		stat path                     		- Display info about path
+		rmdir path                    		- Remove remote directory
+		rm path                       		- Delete remote file
+		version                       		- Show SFTP version					
+					]]></description>
+				</parameter>	
+				
+			</parameters>
+			<examples>
+				<example>
+				<![CDATA[
+<sftp 
+	enabled="true"
+	description="Download file"
+	url="files.bpadomain.ca"
+	username="up_test">
+	password="*******"
+	<cmd responseKey="fileListing">get ${REMOTE_FILE} ${LOCAL_FILE}</cmd>
+</sftp>
+				]]>
+				</example>
+			</examples>
+		</component>
+
+		<!-- COMPONENT: smb -->
+		<component name="smb" title="" class="com.bpadomain.tasks.components.samba.SambaTask">
+			<description><![CDATA[SAMBA - File Transfer.]]></description>
+			<parameters>
+				<parameter type="attribute" name="url" required="yes">
+					<description><![CDATA[URL.]]></description>
+				</parameter>
+				
+				<parameter type="#text" required="yes">
+					<description><![CDATA[SAMBA Command. See sample below.]]></description>
+				</parameter>	
+				
+			</parameters>
+			<examples>
+				<example>
+				<![CDATA[
+Get file:
+<smb url="smb://tdsecurities;username:password@servername/shared/" >
+get /remotePath/remoteFile.txt /localPath/localFile.txt
+</smb>
+
+Put File:
+<smb url="smb://tdsecurities;username:password@servername/shared/" >
+CDATA[put /localPath/localFile.txt /remotePath/remoteFile.txt
+</smb>
+				]]>
+				</example>
+			</examples>
+		</component>
+		
+		<!-- COMPONENT: sqlTransaction -->
+		<component name="sqlTransaction" title="" class="com.bpadomain.tasks.components.sql.SQLTransactionTask">
+			<description><![CDATA[Wraps SQL statements definde by 'sql' task if data needs to be rolled back in case of any failure.
+			]]></description>
+			<parameters>
+				<parameter type="childElement" name="sql" required="yes">
+					<description><![CDATA[Child elements: '<sql key="sql_1"..>insert into ..</sql>']]></description>
+				</parameter>			
+			</parameters>
+			<examples>
+				<example>
+				<![CDATA[
+<sqlTransaction >
+	<sql key="sql_1" description="INSERT INTO SYSTEM_ID_MASTER">
+	-- SYSTEM_ID_MASTER --
+	INSERT INTO SYSTEM_ID_MASTER ( SYSTEM_ID, TYPE ) 
+	VALUES (${NEW_SYTEM_ID}, '${NEW_SYTEM_TYPE}')
+	</sql>
+	
+	<sql key="sql_2" description="INSERT INTO SOURCE_SYSTEM">
+	-- SOURCE_SYSTEM --
+	INSERT INTO SOURCE_SYSTEM ( SYSTEM_ID, NAME, DESCRIPTION, ORIGINATING_SYSTEM_ID ) 
+	VALUES (${NEW_SYTEM_ID}, '${NEW_SYTEM_NAME}', '${NEW_SYTEM_DESCRIPTION}', '${NEW_SYTEM_ORIGINATING_SYSTEM_ID}')
+	</sql>
+</sqlTransaction>
+				]]>
+				</example>
+			</examples>
+		</component>
+		
+
+		<!-- COMPONENT: sql -->
+		<component name="sql" title="" class="com.bpadomain.tasks.components.sql.SQLTask">
+			<description><![CDATA[
+			SQL task executes DML SQL statement.
+			Every SQL execution gets logged in to APP_SQL table.
+			]]></description>
+	
+			<parameters>
+				<parameter type="attribute" name="key" required="no">
+					<description><![CDATA[SQL statement response is referenced by the expression:
+${${key}.ROWS_AFFECTED} 
+						 ]]></description>
+				</parameter>
+				
+				<parameter type="#text" required="yes">
+					<description><![CDATA[SQL Statement]]></description>
+				</parameter>	
+						
+			</parameters>
+			<examples>
+				<example>
+				<![CDATA[
+
+<NOTE >1) Insert data</NOTE>
+<sql key="sql_1" description="INSERT INTO SYSTEM_ID_MASTER">
+-- SYSTEM_ID_MASTER --
+INSERT INTO SYSTEM_ID_MASTER ( SYSTEM_ID, TYPE ) 
+VALUES (${NEW_SYTEM_ID}, '${NEW_SYTEM_TYPE}')
+</sql>
+
+<sql key="sql_2" description="INSERT INTO SOURCE_SYSTEM">
+-- SOURCE_SYSTEM --
+INSERT INTO SOURCE_SYSTEM ( SYSTEM_ID, NAME, DESCRIPTION, ORIGINATING_SYSTEM_ID ) 
+VALUES (${NEW_SYTEM_ID}, '${NEW_SYTEM_NAME}', '${NEW_SYTEM_DESCRIPTION}', '${NEW_SYTEM_ORIGINATING_SYSTEM_ID}')
+</sql>
+
+<NOTE >2) Email responses. </NOTE>
+<email 
+	description="Email SQL responses."
+	to="${emailTo}"
+	subject="${subject}">
+
+SQL 1 inserted record count: ${sql_1.ROWS_AFFECTED}
+
+SQL 2 inserted record count: ${sql_2.ROWS_AFFECTED}
+
+</email> 
+				]]>
+				</example>
+			</examples>
+		</component>
+
+		<!-- COMPONENT: sqlQuery -->
+		<component name="sqlQuery" title="" class="com.bpadomain.tasks.components.sql.SQLQueryTask">
+			<description><![CDATA[Executes SQL Query statement.]]></description>
+			<parameters>
+				<parameter type="attribute" name="key" required="no">
+					<description><![CDATA[References SQL statement]]></description>
+				</parameter>
+				
+				<parameter type="#text" required="yes">
+					<description><![CDATA[SQL Query Statement]]></description>
+				</parameter>	
+				
+				<parameter type="attribute" name="sqlFile" required="no">
+					<description><![CDATA[
+					Absolute Path to SQL Query file.
+					If both parameters '#text' and 'sqlFile' are present 'sqlFile' has a presedence.
+					 ]]></description>
+				</parameter>
+				
+				<parameter type="attribute" name="sqlResource" required="no">
+					<description><![CDATA[Resource path to SQL Query file.
+					If all or eather parameters '#text', 'sqlFile' and 'sqlResource' are present 'sqlResource' has a presedence.]]></description>
+				</parameter>
+				
+				<parameter type="childElement" name="exportCsv" required="no">
+					<description><![CDATA[Child elements: '<exportCsv key="CSV_REPORT" outFile=".." ../>']]></description>
+				</parameter>	
+				
+				<parameter type="childElement" name="exportXls" required="no">
+					<description><![CDATA[Child elements: '<exportXls outFile="/path/to/report.xls"../>']]></description>
+				</parameter>	
+				
+				<parameter type="childElement" name="exportHtml" required="no">
+					<description><![CDATA[Child elements: '<exportHtml key="HTML_REPORT" outFile="/path/to/report.html"../>']]></description>
+				</parameter>	
+				
+				<parameter type="childElement" name="export" required="no">
+					<description><![CDATA[Child elements: '<export key="_REPORT" outFile="/path/to/report.tml"../>']]></description>
+				</parameter>	
+						
+			</parameters>
+			<examples>
+				<example>
+				<![CDATA[
+<sqlQuery 
+		description="Status Query">
+SELECT 
+	SS.NAME, 
+	SS.SYSTEM_ID,
+	APC.PROCESS_TYPE,   
+	APL.STATUS
+FROM 
+	APP_PROCESS_LOG APL, SOURCE_SYSTEM SS, APP_PROCESS_CLASS APC, APP_SOURCE_FILE ASF
+WHERE 
+	APL.PROCESS_CLASS_ID = APC.PROCESS_CLASS_ID 
+	AND APC.SYSTEM_ID = SS.SYSTEM_ID 
+	AND ASF.SYSTEM_ID(+) = SS.SYSTEM_ID
+	AND APL.REPORTING_DATE = to_date('${REPORTING_DATE}','YYYYMMDD')	
+    and apl.STATUS <> 'SCS'
+   	and apl.DELETED = 'N'
+   	and apl.process_id not in (${PROCESS_ID})
+order by  
+	APL.STATUS	
+		
+	<exportHtml 
+		dateFormat="MMM dd, yyyy"
+		htmlTitle="Test Report"
+		ifNull="n/a"
+		key="REPORT_HTML"
+		outFile="/1/testHTMLexporter.html"
+		templateFile="components/sql/QueryHtmlExporterTemplate.htm"/>
+		
+	<exportCsv 
+		dateFormat="MMM dd, yyyy"
+		key="REPORT_CSV"
+		outFile="/1/testHTMLexporter.csv"/>
+	
+	<exportXls 
+		dateFormat="MMM dd, yyyy"
+		key="REPORT_XLS"
+		outFile="/1/testHTMLexporter.xls"
+		workSheet="Test Data"/>
+		
+</sqlQuery>
+
+<sqlQuery 
+		description="A Query">
+SELECT * FROM APP_SQL 
+WHERE REPORTING_DATE = to_date('${REPORTING_DATE}','YYYYMMDD') 
+AND SYSTEM_ID = 2 
+order by PROCESS_ID
+
+	<export
+		key="REPORT_HTML"
+		outFile="/1/testHTMLexporter.html">
+		<format event="start"><table></format>
+		<format event="value"><td>${*}</td></format>
+		<format event="endRow"><tr>${#ROW}</tr></format>
+		<format event="start"><table></format>
+		<format event="end"></table></format>
+	</export>
+	
+</sqlQuery>
+				]]>
+				</example>
+			</examples>
+		</component>
+		
+		<!-- COMPONENT: exportCsv -->
+		<component name="exportCsv" title="" class="com.bpadomain.tasks.components.sql.QueryCsvExporterTask">
+			<description><![CDATA[Exports Query result set to csv file]]></description>
+			<parameters>
+
+				<parameter type="attribute" name="key" required="no">
+					<description><![CDATA[Report Content Reference Key]]></description>
+				</parameter>
+
+				<parameter type="attribute" name="outFile" required="yes">
+					<description><![CDATA[Report file path]]></description>
+				</parameter>
+
+				<parameter type="attribute" name="delimiter" required="no">
+					<description><![CDATA[Data deliminator]]></description>
+					<defaultValue><![CDATA[',' (comma)]]></defaultValue>
+				</parameter>
+
+				<parameter type="attribute" name="dateFormat" required="no">
+					<description><![CDATA[Date format]]></description>
+					<defaultValue><![CDATA[yyyyMMdd]]></defaultValue>
+				</parameter>
+				
+			</parameters>
+			<examples>
+				<example>
+				<![CDATA[
+<sqlQuery>
+SELECT ....		
+	<exportCsv 
+		key="REPORT_CSV"
+		outFile="/1/Report.csv"
+		dateFormat="MMM dd, yyyy"		
+		delimiter="|"
+		/>		
+</sqlQuery>
+				]]>
+				</example>
+			</examples>
+		</component>	
+		
+		<!-- COMPONENT: exportXls -->
+		<component name="exportXls" title="" class="com.bpadomain.tasks.components.sqls.QueryXLSExporterTask">
+			<description><![CDATA[Exports Query result set to Excel file]]></description>
+			<parameters>
+				
+				<parameter type="attribute" name="outFile" required="yes">
+					<description><![CDATA[Report file path]]></description>
+				</parameter>
+
+				<parameter type="attribute" name="workSheet" required="no">
+					<description><![CDATA[Excel WorkSheet Name]]></description>					
+				</parameter>
+
+				<parameter type="attribute" name="dateFormat" required="no">
+					<description><![CDATA[Date format]]></description>
+					<defaultValue><![CDATA[yyyyMMdd]]></defaultValue>
+				</parameter>
+				
+			</parameters>
+			<examples>
+				<example>
+				<![CDATA[
+<sqlQuery>
+SELECT ....		
+	<exportXls
+		outFile="/1/Report.xls"
+		dateFormat="MMM dd, yyyy"		
+		workSheet="Sheet 1"
+		/>		
+</sqlQuery>
+				]]>
+				</example>
+			</examples>
+		</component>
+						
+		<!-- COMPONENT: exportHtml -->
+		<component name="exportHtml" title="" class="com.bpadomain.tasks.components.sql.QueryHtmlExporterTask">
+			<description><![CDATA[Exports Query result set to Excel file]]></description>
+			<parameters>
+					
+				<parameter type="attribute" name="key" required="no">
+					<description><![CDATA[Report Reference Key]]></description>
+				</parameter>
+			
+				<parameter type="attribute" name="outFile" required="yes">
+					<description><![CDATA[Report file path]]></description>
+				</parameter>
+
+				<parameter type="attribute" name="templateFile" required="no">
+					<description><![CDATA[HTML Template file]]></description>	
+					<defaultValue>QueryHtmlExporterTemplate.htm</defaultValue>				
+				</parameter>
+
+				<parameter type="attribute" name="htmlTitle" required="no">
+					<description><![CDATA[Date format]]></description>
+				</parameter>
+				
+				<parameter type="attribute" name="ifNull" required="no">
+					<description><![CDATA[String to replace 'null' string if value is null]]></description>
+					<defaultValue>null</defaultValue>
+				</parameter>
+				
+			</parameters>
+			<examples>
+				<example>
+				<![CDATA[
+<sqlQuery>
+SELECT ....		
+	<exportHtml
+		key="HTML_REPORT"
+		outFile="/1/Report.html"
+		dateFormat="MMM dd, yyyy"
+		/>		
+</sqlQuery>
+				]]>
+				</example>
+			</examples>
+		</component>	
+		
+		<!-- COMPONENT: export -->
+		<component name="export" title="" class="com.bpadomain.tasks.components.sqls.QueryExporterTask">
+			<description><![CDATA[
+			Exports Query result to a text file. 
+			It is very flexibile to format output in different formats as delimited, html, xml etc.. 
+			We can format specific values conditionally.
+			For example we can highlight HTML table rows or data if value exceeds certain limit.  
+			 ]]></description>
+			<parameters>
+	
+				<parameter type="attribute" name="key" required="no">
+					<description><![CDATA[Report Reference Key ]]></description>
+				</parameter>
+			
+				<parameter type="attribute" name="outFile" required="yes">
+					<description><![CDATA[Report file path]]></description>
+				</parameter>
+				
+				<parameter type="childElement" name="format" required="no">
+					<description><![CDATA[Child elements: '<format event="value">...${*}...</format>']]></description>
+				</parameter>	
+		
+				
+			</parameters>
+			<examples>
+				<example filename="i_sample1-export.html">
+				<![CDATA[
+<sqlQuery 
+		description="Test Query">
+	<![CDATA[SELECT 
+USER_ID, LOGIN_ID, FIRST_NAME, 
+   LAST_NAME, PASSWORD, ACTIVE, 
+   DATE_CREATED, DATE_LAST_UPDATED, UPDATED_BY, 
+   TITLE, COST_CENTER, DATE_LAST_ACCESSED
+FROM APP_USER_INFO]]`
+		<export 
+			key="REPORT_HTML"
+			outFile="/1/testHTMLexporter.html">
+			<format 
+				event="start">
+			<![CDATA[<table>]]`
+			</format>
+			<format 
+				event="headerField">
+			<![CDATA[<th>${*}</th>]]`
+			</format>
+			<format 
+				event="endHeaderRow">
+			<![CDATA[<tr>${#ROW}</tr>]]`
+			</format>
+			<format 
+				event="value">
+			<![CDATA[<td>${*}</td>]]`
+			</format>
+			<format 
+				event="endRow">
+			<![CDATA[<tr>${#ROW}</tr>]]`
+			</format>
+			<format 
+				event="end">
+			<![CDATA[</table>]]`
+			</format>
+		</export>
+	</sqlQuery>]]>
+				</example>
+			</examples>
+		</component>	
+
+		<!-- COMPONENT: format -->		
+		<component name="format" title="" class="com.bpadomain.tasks.components.sqls.FormatTask">
+			<description><![CDATA[
+Generates formatted Query Result Set Output
+	]]></description>
+			<parameters>
+				<parameter type="attribute" name="event" required="yes">
+					<description><![CDATA[					
+Tabular data formatting events.
+
+They are invoked in the following sequence: 
+-> start 
+-> startHeaderRow -> headerField -> endHeaderRow 
+-> startRow -> value -> endRow (NOTE: row sequence is repeated #ROW_COUNT times)
+-> end
+
+1) start
+	- Text to be inserted as a header of the file
+	- writes to the buffer or file
+2) startHeaderRow
+	- Text to be inserted before header row 
+3) headerField		
+4) endHeaderRow		
+	- writes to the buffer or file
+5) startRow
+6) value
+7) endRow
+8) end
+
+]]></description>
+				</parameter>
+			</parameters>
+			<examples>
+				<example>
+				<![CDATA[
+SQL Query Result Set formatting events are:
+1) start
+	- Event 'start' defines a text to be inserted as a header of the file
+	- writes to the buffer or the file
+2) startHeaderRow
+	- Text to be inserted before header row. 
+	With this event the the processcretes creates a text buffer for building row line.
+	Usually we put row oppening tags in this event. 
+	Example: <format event="startHeaderRow"><tr></format>
+3) headerField
+	- Formats Header Field Name 
+	Examples: 
+		<format event="headerField"><th>${*}</th></format>
+		It outputs: <th>SOME_FIELD_NAME</th>
+4) endHeaderRow		
+	- The event happens when all header fiels are processed. 
+	It usually closes tags oppened in startHeaderRow event.
+    The buffer acumulated in Header Row processing is referenced by #ROW key.	 
+	- It appends to the buffer and writes appending it to the file.
+	Example: <format event="endHeaderRow">${#ROW}</tr></format>
+5) startRow
+6) value
+7) endRow
+8) end
+                       ................................................
+                       |                                              |
+                       |              (start)                         |
+                       |                                              |
+                       ................................................
+      (startHeaderRow) | {headerField} | (headerField) | (headerField)| (endHeaderRow)
+                       ................................................
+            (startRow) |  (value) |  (value) |  (value)  | (value)    | (endRow)
+                       ................................................
+            (startRow) |  (value) |  (value) |  (value)  | (value)    | (endRow)
+                       ................................................
+            (startRow) |  (value) |  (value) |  (value)  | (value)    | (endRow)
+                       ................................................
+                       |                                              |
+                       |                (end)                         |
+                       |                                              |
+                       ................................................
+				
+			
+		<format 
+			event="start">
+		<![CDATA[<table>]]`
+		</format>
+		<format 
+			event="headerField">
+		<![CDATA[<th>${*}</th>]]`
+		</format>
+		<format 
+			event="endHeaderRow">
+		<![CDATA[<tr>${#ROW}</tr>]]`
+		</format>
+		<format 
+			event="value">
+		<![CDATA[<td>${*}</td>]]`
+		</format>
+		<format 
+			event="endRow">
+		<![CDATA[<tr>${#ROW}</tr>]]`
+		</format>
+		<format 
+			event="end">
+		<![CDATA[</table>]]`
+		</format>				
+				
+				]]>
+				</example>
+			</examples>
+		</component>
+<!-- condition -->
+
+		
+		<!-- COMPONENT: condition -->
+		<component name="condition" title="" class="com.bpadomain.tasks.components.sql.FormatConditionTask">
+			<description><![CDATA[Conditionally applies formatting]]></description>
+			<parameters>
+				<parameter type="#text" required="no">
+					<description><![CDATA[Condition to be evaluated before the format event gets applied. ]]></description>
+				</parameter>
+			</parameters>
+			<examples>
+				<example>
+				<![CDATA[
+		
+		* Change font style to <b>..</b> (bold) for all values in column 'NAME'.
+		  The condittion is met if COLUMN_NAME is equal to 'NAME'
+		
+		<format 
+			event="value">
+		<![CDATA[<td><b>${*}</b></td>]]~
+			<condition >
+			<![CDATA[([${#COLUMN_NAME}~EQ~NAME])]]~
+			</condition>
+		</format>
+		
+		* Highlight values by changing style dinamically ( class="status_${STATUS}" ) 		  	
+		<format 
+			event="value">
+		<![CDATA[<td class="status_${STATUS}">${*}</td>]]~
+			<condition >
+			<![CDATA[([${#COLUMN_NAME}~EQ~STATUS])]]~
+			</condition>
+		</format>
+
+				]]>
+				</example>
+			</examples>
+		</component>
+		
+<!-- fileFormat 
+public class FileFormatterTask extends Task{
+	protected static Logger log = Logger.getLogger(FileFormatterTask.class);
+	
+	//This TAG
+	public static final String TAG = "fileFormat";
+	
+	//Attributes
+	public static final String ATTRIB_key = "key";
+	
+	public static final String ATTRIB_file = "file";
+	public static final String ATTRIB_outFile = "outFile";
+	
+	public static final String ATTRIB_columns = "columns";
+	public static final String ATTRIB_deliminator = "deliminator";
+
+		
+	public static final String ATTRIB_writeHeader = "writeHeader";
+-->
+
+		<!-- COMPONENT: fileFormat -->
+		<component name="fileFormat" title="" class="com.bpadomain.tasks.components.FileFormatterTask">
+			<description><![CDATA[Exports Query result set to Excel file]]></description>
+			<parameters>
+					
+				<parameter type="attribute" name="key" required="no">
+					<description><![CDATA[Report Reference Key]]></description>
+				</parameter>
+			
+				<parameter type="attribute" name="file" required="yes">
+					<description><![CDATA[Delimited text file.]]></description>
+				</parameter>
+				
+				<parameter type="attribute" name="deliminator" required="yes">
+					<description><![CDATA[Data deliminator]]></description>
+					<defaultValue>',' (comma)</defaultValue>
+				</parameter>
+				
+				<parameter type="attribute" name="writeHeader" required="no">
+					<description><![CDATA[Boolean. If false does not write a header line.]]></description>
+					<defaultValue>true</defaultValue>
+				</parameter>
+				
+				<parameter type="attribute" name="outFile" required="yes">
+					<description><![CDATA[Output file (Report)]]></description>
+				</parameter>
+
+				<parameter type="attribute" name="columns" required="no">
+					<description><![CDATA[Sets header line]]></description>				
+				</parameter>
+								
+				<parameter type="childElement" name="format" required="yes">
+					<description><![CDATA[
+Child elements: '<format event="value">...${*}...</format>'
+
+----------------------------------------
+Internal properties creted at runtime
+----------------------------------------
+KEY: #COLNAMES - List of Column Names separated by comma
+Usage: ..Columns are: ${#COLNAMES}..  
+
+KEY: #ROW_INDEX - Current Row Index 
+Usage: ..Current Row index: ${#ROW_INDEX}..
+
+KEY: #COLUMN_INDEX - Current Column Index
+Usage: ..Current Column Index: ${#COLUMN_INDEX}..
+
+KEY: #COLUMN_NAME - Current Column Name
+Usage: ..Current Column Name: ${#COLUMN_NAME}..
+
+KEY: #COLUMN_NAME@<col index> - Column Name at index
+Usage: ..Column Name at index 2: ${#COLUMN_NAME@2}..
+
+KEY: COLUMN_COUNT - Column Cont
+Usage: ..Column count: ${#COLUMN_COUNT}..
+
+KEY: * - Value under current cursor position 
+Usage: ..value: ${*}..
+
+					]]></description>
+				</parameter>	
+		
+				
+			</parameters>
+			<examples>
+				<example>
+				<![CDATA[
+<fileFormat 
+	file"/path/to/inputFile.csv" 
+	outFile="/path/to/reportFile.html">
+		<format 
+			event="start">
+		<![CDATA[<table>]]`
+		</format>
+		<format 
+			event="headerField">
+		<![CDATA[<th>${*}</th>]]`
+		</format>
+		<format 
+			event="endHeaderRow">
+		<![CDATA[<tr>${#ROW}</tr>]]`
+		</format>
+		<format 
+			event="value">
+		<![CDATA[<td>${*}</td>]]`
+		</format>
+		<format 
+			event="endRow">
+		<![CDATA[<tr>${#ROW}</tr>]]`
+		</format>
+		<format 
+			event="end">
+		<![CDATA[</table>]]`
+		</format>				
+</fileFormat>
+				]]>
+				</example>
+			</examples>
+		</component>	
+
+
+<!-- jmsQueReceiver  -->
+		<section contentType="customTask"  title="Implementing Custom Task Cmponent ">
+			<paragraph><![CDATA[...]]></paragraph>
+			<paragraph><![CDATA[...]]></paragraph>
+ 		</section>
+
+		<!-- Doclet template -->
+		<component>
+			<description><![CDATA[*]]></description>
+			<parameters>
+				<parameter type="attribute" name="" required="" defaultValue="">
+					<description><![CDATA[*]]></description>
+				</parameter>
+				<parameter type="text" name="" required="">
+					<defaultValue></defaultValue>
+					<description><![CDATA[*]]></description>
+				</parameter>
+			</parameters>
+			<examples>
+				<example>
+				<![CDATA[*]]>
+				</example>
+			</examples>
+		</component>
+		<!-- Doclet template -->
+	</section>
+</document>
