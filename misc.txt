@@ -1,3 +1,347 @@
+package com.td.esds.podiummd.utils;
+
+/**
+ * Created by Goran Drapic on 3/4/16.
+ */
+
+import java.io.FileInputStream;
+import java.io.InputStream;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Properties;
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.DefaultParser;
+import org.apache.commons.cli.HelpFormatter;
+import org.apache.commons.cli.Options;
+
+public class DeletePodiumMd {
+    private static final String SQL_GET_CHILD_TABLES =
+            "SELECT " +
+                    "	tc.table_schema, \n" +
+                    "	tc.constraint_name, \n" +
+                    "	tc.table_name, \n" +
+                    "	kcu.column_name AS ref_column_name, \n" +
+                    "	ccu.table_name AS parent_table_name,\n" +
+                    "	ccu.column_name AS parent_column_name \n" +
+                    "FROM information_schema.table_constraints tc \n" +
+                    "JOIN information_schema.key_column_usage kcu ON tc.constraint_name = kcu.constraint_name \n" +
+                    "JOIN information_schema.constraint_column_usage ccu ON ccu.constraint_name = tc.constraint_name \n" +
+                    "WHERE tc.table_schema = 'podium_core' \n" +
+                    "AND tc.constraint_type = 'FOREIGN KEY' \n" +
+                    "AND ccu.table_name=?";
+    Properties dbProperties;
+    Connection connection;
+    PreparedStatement pstmt;
+    List<String> sqlDeleteList;
+
+    public DeletePodiumMd(String dbPropertiesPath) throws Exception {
+        this.dbProperties = new Properties();
+        this.connection = null;
+        this.pstmt = null;
+        this.sqlDeleteList = new ArrayList();
+        Object is = null;
+        if(dbPropertiesPath != null && !"".equals(dbPropertiesPath)) {
+            is = new FileInputStream(dbPropertiesPath);
+        } else {
+            dbPropertiesPath = "/jdbc.properties";
+            is = this.getClass().getResourceAsStream(dbPropertiesPath);
+        }
+
+        try {
+            if(is == null) {
+                throw new Exception("/jdbc.properties file not found!");
+            }
+
+            this.dbProperties.load((InputStream)is);
+            Class.forName(this.dbProperties.getProperty("jdbc.driver"));
+            this.connection = DriverManager.getConnection(
+                    this.dbProperties.getProperty("jdbc.url"),
+                    this.dbProperties.getProperty("jdbc.user"),
+                    this.dbProperties.getProperty("jdbc.password")
+            );
+            this.pstmt = connection.prepareStatement(SQL_GET_CHILD_TABLES);
+        } finally {
+            if(is != null) {
+                ((InputStream)is).close();
+            }
+
+        }
+
+    }
+
+    public DeletePodiumMd() throws Exception {
+        this((String)null);
+    }
+
+    private List<DeletePodiumMd.Table> getChildTables(String tableName) throws SQLException {
+        ArrayList childTables = new ArrayList();
+        ResultSet rs = null;
+
+        try {
+            this.pstmt.setString(1, tableName);
+            rs = this.pstmt.executeQuery();
+
+            while(rs.next()) {
+                DeletePodiumMd.Table table = new DeletePodiumMd.Table(rs.getString("table_schema"), rs.getString("constraint_name"), rs.getString("table_name"), rs.getString("ref_column_name"), rs.getString("parent_table_name"), rs.getString("parent_column_name"));
+                childTables.add(table);
+            }
+        } finally {
+            if(rs != null) {
+                rs.close();
+            }
+
+        }
+
+        return childTables;
+    }
+
+    public void deleteHierarchy(String hierarchyName) throws SQLException {
+        DeletePodiumMd.Table rootTable = new DeletePodiumMd.Table("podium_core", "", "pd_source_hier", "nid", "", "");
+        rootTable.sqlSelect = " from podium_core.pd_source_hier where sname = \'" + hierarchyName + "\'";
+        this.process(rootTable);
+        this.executeDelete();
+    }
+
+    public void deleteSource(String hierarchyName, String sourceName) throws SQLException {
+        DeletePodiumMd.Table rootTable = new DeletePodiumMd.Table("podium_core", "", "pd_source", "nid", "", "");
+        rootTable.sqlSelect = " from podium_core.pd_source where regexp_replace(sname,E\'\\W\',\'_\',\'g\') = regexp_replace(\'" + sourceName + "\',E\'" + "\\W" + "\',\'_\',\'g\') and source_hier_nid = (select nid from podium_core.pd_source_hier where sname = \'" + hierarchyName + "\')";
+        this.process(rootTable);
+        this.executeDelete();
+    }
+
+    public void deleteSource(String sourceName) throws SQLException {
+        DeletePodiumMd.Table rootTable = new DeletePodiumMd.Table("podium_core", "", "pd_source", "nid", "", "");
+        rootTable.sqlSelect = " from podium_core.pd_source where regexp_replace(sname,E\'\\W\',\'_\',\'g\') = regexp_replace(\'" + sourceName + "\',E\'" + "\\W" + "\',\'_\',\'g\')";
+        this.process(rootTable);
+        this.executeDelete();
+    }
+
+    public void deleteEntity(String hierarchyName, String sourceName, String entityName) throws SQLException {
+        DeletePodiumMd.Table rootTable = new DeletePodiumMd.Table("podium_core", "", "pd_entity", "nid", "", "");
+        rootTable.sqlSelect = " from podium_core.pd_entity where regexp_replace(sname,E\'\\W\',\'_\',\'g\') = regexp_replace(\'" + entityName + "\',E\'" + "\\W" + "\',\'_\',\'g\') and source_nid in (select nid from podium_core.pd_source where regexp_replace(sname,E\'" + "\\W" + "\',\'_\',\'g\') = regexp_replace(\'" + sourceName + "\',E\'" + "\\W" + "\',\'_\',\'g\') and source_hier_nid = (select nid from podium_core.pd_source_hier where sname = \'" + hierarchyName + "\'))";
+        this.process(rootTable);
+        this.executeDelete();
+    }
+
+    public void deleteEntity(String sourceName, String entityName) throws SQLException {
+        DeletePodiumMd.Table rootTable = new DeletePodiumMd.Table("podium_core", "", "pd_entity", "nid", "", "");
+        rootTable.sqlSelect = " from podium_core.pd_entity where regexp_replace(sname,E\'\\W\',\'_\',\'g\') = regexp_replace(\'" + entityName + "\',E\'" + "\\W" + "\',\'_\',\'g\') and source_nid in (select nid from podium_core.pd_source where regexp_replace(sname,E\'" + "\\W" + "\',\'_\',\'g\') = regexp_replace(\'" + sourceName + "\',E\'" + "\\W" + "\',\'_\',\'g\'))";
+        this.process(rootTable);
+        this.executeDelete();
+    }
+
+    public void deleteEntity(String entityName) throws SQLException {
+        DeletePodiumMd.Table rootTable = new DeletePodiumMd.Table("podium_core", "", "pd_entity", "nid", "", "");
+        rootTable.sqlSelect = " from podium_core.pd_entity where regexp_replace(sname,E\'\\W\',\'_\',\'g\') = regexp_replace(\'" + entityName + "\',E\'" + "\\W" + "\',\'_\',\'g\')";
+        this.process(rootTable);
+        this.executeDelete();
+    }
+
+    public void deleteField(String hierarchyName, String sourceName, String entityName, String fieldName) throws SQLException {
+        DeletePodiumMd.Table rootTable = new DeletePodiumMd.Table("podium_core", "", "pd_field", "nid", "", "");
+        rootTable.sqlSelect = " from podium_core.pd_field where sname = \'" + fieldName + "\' and entity_nid in (select nid from podium_core.pd_entity where regexp_replace(sname,E\'" + "\\W" + "\',\'_\',\'g\') = regexp_replace(\'" + entityName + "\',E\'" + "\\W" + "\',\'_\',\'g\') and source_nid in (select nid from podium_core.pd_source where regexp_replace(sname,E\'" + "\\W" + "\',\'_\',\'g\') = regexp_replace(\'" + sourceName + "\',E\'" + "\\W" + "\',\'_\',\'g\') and source_hier_nid = (select nid from podium_core.pd_source_hier where sname = \'" + hierarchyName + "\')))";
+        this.process(rootTable);
+        this.executeDelete();
+    }
+
+    public void deleteField(String sourceName, String entityName, String fieldName) throws SQLException {
+        DeletePodiumMd.Table rootTable = new DeletePodiumMd.Table("podium_core", "", "pd_field", "nid", "", "");
+        rootTable.sqlSelect = " from podium_core.pd_field where sname = \'" + fieldName + "\' and entity_nid in (select nid from podium_core.pd_entity where regexp_replace(sname,E\'" + "\\W" + "\',\'_\',\'g\') = regexp_replace(\'" + entityName + "\',E\'" + "\\W" + "\',\'_\',\'g\') and source_nid in (select nid from podium_core.pd_source where regexp_replace(sname,E\'" + "\\W" + "\',\'_\',\'g\') = regexp_replace(\'" + sourceName + "\',E\'" + "\\W" + "\',\'_\',\'g\')))";
+        this.process(rootTable);
+        this.executeDelete();
+    }
+
+    private void executeDelete() {
+        Statement stmt = null;
+
+        try {
+            this.connection.setAutoCommit(false);
+            stmt = this.connection.createStatement();
+            Iterator e = this.sqlDeleteList.iterator();
+
+            while(e.hasNext()) {
+                String e1 = (String)e.next();
+                stmt.addBatch(e1);
+            }
+
+            int[] var16 = stmt.executeBatch();
+
+            for(int var17 = 0; var17 < var16.length; ++var17) {
+                System.out.println("DELETED:" + var16[var17] + ":" + (String)this.sqlDeleteList.get(var17));
+            }
+
+            this.connection.commit();
+        } catch (SQLException var14) {
+            try {
+                this.connection.rollback();
+            } catch (SQLException var13) {
+                var13.printStackTrace();
+            }
+
+            var14.printStackTrace();
+        } finally {
+            try {
+                stmt.close();
+                this.connection.setAutoCommit(true);
+            } catch (SQLException var12) {
+                var12.printStackTrace();
+            }
+
+        }
+
+    }
+
+    private void process(DeletePodiumMd.Table parentTable) throws SQLException {
+        List childtTables = this.getChildTables(parentTable.tableName);
+        if(childtTables != null && !childtTables.isEmpty()) {
+            Iterator i$ = childtTables.iterator();
+
+            while(i$.hasNext()) {
+                DeletePodiumMd.Table table = (DeletePodiumMd.Table)i$.next();
+                table.buildSQL(parentTable);
+                this.process(table);
+                parentTable.childtables.add(table);
+            }
+        }
+
+        this.sqlDeleteList.add(parentTable.getSqlDelete());
+    }
+
+    private void close() throws SQLException {
+        if(this.pstmt != null) {
+            this.pstmt.close();
+        }
+
+        if(this.connection != null) {
+            this.connection.close();
+        }
+
+    }
+
+    public static void main(String[] args) {
+        args= new String[]{"-hierarchy", "TEST", "-source", "test"};
+
+        Options options = new Options();
+        options.addOption("jdbcproperties", true, "JDBC Properties File Path");
+        options.addOption("hierarchy", true, "Hierarchy Name");
+        options.addOption("source", true, "Source Name");
+        options.addOption("entity", true, "Entity Name");
+        DefaultParser parser = new DefaultParser();
+        DeletePodiumMd dpmd = null;
+        byte exitVal = 0;
+
+        try {
+            CommandLine e = parser.parse(options, args);
+            boolean hasDbproperties = e.hasOption("jdbcproperties");
+            String dbproperties = null;
+            if(hasDbproperties) {
+                dbproperties = e.getOptionValue("jdbcproperties");
+            }
+
+            dpmd = new DeletePodiumMd(dbproperties);
+            boolean hasHierarchy = e.hasOption("hierarchy");
+            boolean hasSource = e.hasOption("source");
+            boolean hasEntity = e.hasOption("entity");
+
+
+            if(hasHierarchy && !hasSource && !hasEntity) {
+                dpmd.deleteHierarchy(e.getOptionValue("hierarchy"));
+            }
+            else if(hasHierarchy && hasSource && !hasEntity) {
+                dpmd.deleteSource(e.getOptionValue("hierarchy"), e.getOptionValue("source"));
+            }
+            else if(!hasHierarchy && hasSource && !hasEntity) {
+                dpmd.deleteSource(e.getOptionValue("source"));
+            }
+            else if(hasHierarchy && hasSource && hasEntity) {
+                dpmd.deleteEntity(e.getOptionValue("hierarchy"), e.getOptionValue("source"), e.getOptionValue("entity"));
+            }
+            else if(!hasHierarchy && hasSource && hasEntity) {
+                dpmd.deleteEntity(e.getOptionValue("source"), e.getOptionValue("entity"));
+            }
+            else{
+                HelpFormatter formatter = new HelpFormatter();
+
+                formatter.printHelp(
+                        "\njava -jar podium-delete-md.jar " +
+                                "-jdbcproperties <arg> " +
+                                "-hierarchy <arg> " +
+                                "-source <arg> " +
+                                "-entity <arg>",
+                        options
+                );
+            }
+        } catch (Exception var19) {
+            var19.printStackTrace();
+            exitVal = 1;
+        } finally {
+            try {
+                dpmd.close();
+            } catch (SQLException var18) {
+                var18.printStackTrace();
+            }
+
+        }
+
+        System.exit(exitVal);
+    }
+
+    class Table {
+        String tableSchema;
+        String constraintName;
+        String tableName;
+        String refColumnName;
+        String parentTableName;
+        String parentColumnName;
+        String sqlSelect = "";
+        List<DeletePodiumMd.Table> childtables = new ArrayList();
+
+        public Table(String tableSchema, String constraintName, String tableName, String refColumnName, String parentTableName, String parentColumnName) {
+            this.tableSchema = tableSchema;
+            this.constraintName = constraintName;
+            this.tableName = tableName;
+            this.refColumnName = refColumnName;
+            this.parentTableName = parentTableName;
+            this.parentColumnName = parentColumnName;
+        }
+
+        public String getSqlDelete() {
+            return "delete" + this.sqlSelect;
+        }
+
+        public void buildSQL(DeletePodiumMd.Table parentTable) {
+            if(parentTable.tableName != null && this.parentTableName.equals(parentTable.tableName)) {
+                this.sqlSelect = " from " + this.tableSchema + "." + this.tableName + " where " + this.refColumnName + " in (select " + this.parentColumnName + parentTable.sqlSelect + ")";
+            }
+
+        }
+
+        public String toString() {
+            return
+                    "ChildTable [tableSchema=" +
+                            this.tableSchema + ", constraintName=" +
+                            this.constraintName + ", tableName=" +
+                            this.tableName + ", refColumnName=" +
+                            this.refColumnName + ", foreignTableName=" +
+                            this.parentTableName + ", foreignColumnName=" +
+                            this.parentColumnName + ", sqlSelect=" +
+                            this.sqlSelect + ", sqlDelete=" +
+                            this.getSqlDelete() + ", childtables=" +
+                            this.childtables + "]";
+        }
+    }
+}
+
+
+
+--------------------------------------------------------------
 package misc.iphone;
 
 import org.w3c.dom.Document;
