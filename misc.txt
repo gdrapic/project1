@@ -1,3 +1,162 @@
+@SpringBootApplication
+@EnableAsync
+public class PodiumMdSyncApplication implements CommandLineRunner
+{
+
+	private static final Logger LOG = LoggerFactory.getLogger(PodiumMdSyncApplication.class);
+	
+	enum State{
+		SFW_PODIUM_SYNC_START,
+		SFW_PODIUM_SYNC_STOP,
+		SFW_PODIUM_SYNC_ERROR;
+		public long log(){
+			long currentTimeMillis = System.currentTimeMillis();
+			if(this==SFW_PODIUM_SYNC_ERROR){
+				LOG.error("{} - [{}]", this.name(), new Timestamp(currentTimeMillis).toString());
+			}
+			else
+				LOG.info("{} - [{}]", this.name(), new Timestamp(currentTimeMillis).toString());
+			return currentTimeMillis;
+		}
+	}
+	
+	@Autowired
+	DataSource dataSource;
+	
+	@Autowired
+	private SyncService syncService;
+
+	@Autowired
+	private NotificationService notificationService;
+
+	public static void main(String[] args)
+	{
+
+		SpringApplication.run(PodiumMdSyncApplication.class, args);
+	}
+
+	/* (non-Javadoc)
+	 * @see org.springframework.boot.CommandLineRunner#run(java.lang.String[])
+	 */
+	@Override
+	public void run(String... args) throws Exception
+	{
+		LOG.info("DATASOURCE: {}", dataSource);
+		Map<String, Object> runtimeProperties = new HashMap<String, Object>();
+		
+		long currentTimeMillis = State.SFW_PODIUM_SYNC_START.log();
+		runtimeProperties.put(NotificationService.RUNTIME_KEY_SYNC_START_TIME_MILLS, currentTimeMillis);
+		
+		MetaDataProvider metaDataProvider = syncService.createMetaDataProvider();
+		
+		List<SourceSyncLog> ssLogs = null;
+		List<SourceSyncLog> ssDeleteLogs = null;
+		
+		try
+		{
+			String srcIdList = System.getProperty("srcIdList");
+			
+			String srcNameList = System.getProperty("srcNameList");
+			
+			HashSet<Long> srcIdSet = new HashSet<Long>();
+			
+			if(srcIdList==null && srcNameList==null){
+				ssLogs = syncService.syncMetaData(metaDataProvider);
+			}
+			else{
+				if(srcIdList!=null){
+					
+					String[] idArr = srcIdList.split(",");
+					for ( int i = 0 ; i < idArr.length ; i++ )
+					{
+						try
+						{
+							srcIdSet.add(new Long(idArr[i].trim()));
+						} catch (Exception e)
+						{
+							// ignore invalid entries
+						}
+						
+					}
+				}
+				
+				if(srcNameList!=null){
+					
+					HashSet<String> srcNameSet = new HashSet<String>();
+
+					String[] nameArr = srcNameList.split(",");
+					for ( int i = 0 ; i < nameArr.length ; i++ )
+					{
+						srcNameSet.add(nameArr[i].trim());
+					}
+
+					srcIdSet.addAll(metaDataProvider.getSourceIds(srcNameSet));
+				
+				}
+				
+				ssLogs = syncService.syncMetaData(metaDataProvider, srcIdSet);
+			}
+			
+			while (syncService.isRunning())
+			{
+				Thread.sleep(10 * 1000); //Sleep 10 sec.
+			}
+				
+			// cleanup deleted sources
+			ssDeleteLogs = syncService.deleteSources(metaDataProvider);
+			
+			while (syncService.isRunning())
+			{
+				Thread.sleep(10 * 1000); //Sleep 10 sec.
+			}
+
+		} catch (Exception e)
+		{
+			e.printStackTrace();
+			
+			currentTimeMillis =  State.SFW_PODIUM_SYNC_ERROR.log();
+			runtimeProperties.put(NotificationService.RUNTIME_KEY_SYNC_END_TIME_MILLS, currentTimeMillis);
+			runtimeProperties.put(NotificationService.RUNTIME_KEY_SOURCES_SYNC_LOGS, ssLogs);
+			List<MailData> mails = notificationService.getFailedMailData(runtimeProperties, e);
+
+			try
+			{
+				notificationService.sendMails(mails); 
+			} catch (Exception ex)
+			{
+				ex.printStackTrace();
+				for ( MailData mailData : mails )
+				{
+					LOG.info(mailData.toJsonString()); 
+				}
+			}
+			
+			System.exit(1);
+		}
+
+		currentTimeMillis =  State.SFW_PODIUM_SYNC_STOP.log();
+		runtimeProperties.put(NotificationService.RUNTIME_KEY_SYNC_END_TIME_MILLS, currentTimeMillis);
+		runtimeProperties.put(NotificationService.RUNTIME_KEY_SOURCES_SYNC_LOGS, ssLogs);
+		if(ssDeleteLogs!=null) runtimeProperties.put(NotificationService.RUNTIME_KEY_SOURCES_DELETE_LOGS, ssDeleteLogs);
+		
+		List<MailData> mails = notificationService.getCompletedMailData(runtimeProperties);
+		try
+		{
+			notificationService.sendMails(mails); 
+		} catch (Exception e)
+		{
+			e.printStackTrace();
+			for ( MailData mailData : mails )
+			{
+				LOG.info(mailData.toJsonString()); 
+			}
+		}
+		
+		System.exit(0);
+	}
+	
+}
+-------------------------------------------
 package com.td.esds.podiummd.utils;
 
 /**
