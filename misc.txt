@@ -1,4 +1,6 @@
-
+spring.main.banner-mode=off
+spring.main.web-environment=false
+-----------------------------------------------------------
 #!/bin/bash
 
 BASEDIR=$(dirname "$0")
