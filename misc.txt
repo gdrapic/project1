@@ -1,3 +1,24 @@
+
+#!/bin/bash
+
+BASEDIR=$(dirname "$0")
+cd $BASEDIR && cd ../ 
+
+JAVA_OPTS=""
+
+for var in "$@"
+do
+#    echo "$var"
+    JAVA_OPTS="-D$var $JAVA_OPTS"
+done
+echo "JAVA_OPTS=$JAVA_OPTS"
+
+nohup java $JAVA_OPTS -jar td-sf-podium-metadata-sync*[0-9].jar > /dev/null 2>&1 &
+--------------------------------------------------------
+#!/bin/bash
+
+pkill -f td-sf-podium-metadata-sync
+--------------------------------------------------------
 @SpringBootApplication
 @EnableAsync
 public class PodiumMdSyncApplication implements CommandLineRunner
