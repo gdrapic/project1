@@ -1,6 +1,38 @@
 package com.bpadomain.persistence.statements;
 
 import java.sql.PreparedStatement;
+
+import org.apache.log4j.Logger;
+
+public class UpdateStatement extends APreparedStatement{
+	private static Logger log = Logger.getLogger(UpdateStatement.class);
+		
+	public UpdateStatement(String sql) throws Exception {
+		super(sql);
+	}
+
+	public UpdateStatement(String dataSourceName, String sql) throws Exception {
+		super(dataSourceName, sql);	
+	}
+
+	@Override
+	protected Integer doExecute(Object[] parameters) throws Exception {
+			
+		statement = conn.prepareStatement(sql);
+		
+		setParameters(parameters); ;
+		
+		int retVal = ((PreparedStatement)statement).executeUpdate();
+		
+		return new Integer(retVal);
+	}
+
+}
+
+------------------------------------------------------------
+package com.bpadomain.persistence.statements;
+
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 
 import org.apache.log4j.Logger;
