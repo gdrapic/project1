@@ -1,5 +1,56 @@
 package com.bpadomain.persistence.statements;
 
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+
+import org.apache.log4j.Logger;
+
+public abstract class QueryStatement extends APreparedStatement{
+	private static Logger log = Logger.getLogger(QueryStatement.class);
+	
+	
+	public QueryStatement(String sql) throws Exception {
+		super(sql);
+	}
+
+	public QueryStatement(String dataSourceName, String sql) throws Exception {
+		super(dataSourceName, sql);	
+	}
+
+	@Override
+	protected  <T> T doExecute(Object[] parameters) throws Exception {
+		T retVal = null;
+		statement = conn.prepareStatement(sql,ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_UPDATABLE);
+				
+		setParameters( parameters);
+		
+		ResultSet rs = null;
+		try {
+			rs = ((PreparedStatement)statement).executeQuery();
+			retVal = handleResultSet(rs);
+		}
+		finally{
+			try {
+				if(rs !=null){
+					rs.close();
+				}
+			} catch (Exception e) {
+				// TODO: handle exception
+			}
+		}
+		return retVal;
+	}
+	
+	protected abstract <T> T handleResultSet(ResultSet rs) throws Exception;
+//	{
+//		System.err.println("Override method handleResultSet(ResultSet rs) in subclass!");
+//		throw new Exception("Override method handleResultSet(ResultSet rs) in subclass!");
+//	}
+}
+
+-------------------------------------------------------------------
+package com.bpadomain.persistence.statements;
+
 import java.sql.Connection;
 import java.sql.Statement;
 
