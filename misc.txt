@@ -1,3 +1,72 @@
+
+package com.bpadomain.persistence.statements;
+
+import java.sql.PreparedStatement;
+import java.sql.Types;
+
+import org.apache.log4j.Logger;
+
+public abstract class APreparedStatement extends AStatement{
+	
+	private static Logger log = Logger.getLogger(AStatement.class);
+		
+	public APreparedStatement(String sql) throws Exception {
+		super(sql);
+	}
+
+	public APreparedStatement(String dataSourceName, String sql)
+			throws Exception {
+		super(dataSourceName, sql);
+		// TODO Auto-generated constructor stub
+	}
+
+    /**
+     * 
+     * @param preparedStatement
+     * @param parameters
+     * @throws Exception
+     */
+    public void setParameters( Object[] parameters) throws Exception{
+    	
+    	PreparedStatement preparedStatement = ((PreparedStatement)statement);
+    	
+    	if (parameters == null){
+    		log.info("No Parameters");
+    		return;
+    	}
+    	    	
+		if(parameters !=null && parameters.length>0){
+        	for (int i = 0; i < parameters.length; i++) { 
+        		int pIdx = i+1;
+        		log.info("Parameter (" + pIdx + "): " + parameters[i]);
+        		
+        		if (parameters[i] == null){
+        			preparedStatement.setNull(pIdx, Types.NULL);        		
+        		}        		
+        		else if(parameters[i] instanceof java.util.Date){        			
+        			if(parameters[i] instanceof java.sql.Timestamp){        			            			
+            			preparedStatement.setTimestamp(pIdx,(java.sql.Timestamp) parameters[i]);
+            		}
+        			else if(parameters[i] instanceof java.sql.Date){        	        				
+            			preparedStatement.setDate(pIdx, (java.sql.Date) parameters[i]);
+            		}
+        			else{
+        				java.util.Date date = (java.util.Date)parameters[i];
+        				java.sql.Date sqlDate = new java.sql.Date(date.getTime());
+        				preparedStatement.setDate(pIdx,sqlDate);
+        			}
+        		}        		
+        		else preparedStatement.setObject(pIdx, parameters[i]); 
+        		
+			}
+        }
+		
+    }
+    
+}
+
+
+--------------------------------------------------------------
 spring.main.banner-mode=off
 spring.main.web-environment=false
 -----------------------------------------------------------
