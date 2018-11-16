@@ -1,4 +1,118 @@
+package com.bpadomain.persistence.statements;
 
+import java.sql.Connection;
+import java.sql.Statement;
+
+import org.apache.log4j.Logger;
+
+import com.bpadomain.persistence.datasource.DBConnService;
+
+/**
+ * @param <T>
+ */
+public abstract class AStatement {
+	
+	private static Logger log = Logger.getLogger(AStatement.class);
+   
+	String dataSourceName;
+	Connection conn;
+    Statement statement;
+    String sql;
+    
+    public AStatement(String sql) throws Exception{   	
+    	this.sql = sql;
+    }
+    
+    public AStatement( String dataSourceName, String sql) throws Exception{ 
+    	this(sql);
+        this.dataSourceName =dataSourceName;
+    }
+    
+    /**
+     * Executes query and closes resources
+     * @param <T>
+     *
+     * @param parameters
+     * @return
+     * @throws java.sql.SQLException
+     * @throws Exception
+     */
+    public <T> T execute(Object... parameters) throws Exception {
+    	
+        if (parameters==null) {        	
+        	parameters = new Object[]{null};
+    	}
+        
+    	conn = DBConnService.getInstance().getConnection(dataSourceName);
+        Exception exeption = null;
+        T retVal = null;
+       
+        try {        	
+            conn.setAutoCommit(false);
+            log.info("-- Executing SQL ----------------------------");   
+            log.info(sql);
+            log.info("---------------------------------------------");
+            retVal = doExecute(parameters);
+            conn.commit();
+        } catch (Exception e) {        	
+        	log.info("-- Exception --------------------------------");
+        	log.error(e);
+        	log.info("---------------------------------------------");
+        	log.info("Rolling back!");        	
+            conn.rollback();
+            exeption = e;
+            e.printStackTrace();
+        } finally {
+            conn.setAutoCommit(true);
+            close();
+            reset();
+            if (exeption != null) {
+                throw exeption;
+            }
+        }
+
+        return retVal;
+    }
+
+    private void reset() {
+        conn = null;
+        statement = null;
+    }
+
+    /**
+     * Close statement, result set objects and return the connection back to connection pool.
+     * This method should be called in each public method before the method returns
+     */
+    public void close() {
+    	
+        try {
+            if (statement != null){
+            	log.info("Closing statement!");
+            	statement.close();
+            }
+            log.info("Return connection to the pool " + dataSourceName + "!");
+            DBConnService.getInstance().closeConnection(dataSourceName, conn);
+            
+        } catch (Exception e) {
+            e.getMessage();
+        }
+
+        reset();
+    }
+    
+    /**
+     * Executes SQL Statement. It does not close connection
+     * @param <T>
+     *
+     * @param params
+     * @return
+     * @throws java.sql.SQLException
+     * @throws Exception
+     */
+    protected abstract <T> T doExecute(Object[] parameters) throws Exception;
+
+}
+------------------------------------------------------------------------
 package com.bpadomain.persistence.statements;
 
 import java.sql.PreparedStatement;
